@@ -1,7 +1,13 @@
 #!/usr/bin/env node
 const assert = require("node:assert/strict");
 const { spawnSync } = require("node:child_process");
-const { mkdirSync, mkdtempSync, rmSync, writeFileSync } = require("node:fs");
+const {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} = require("node:fs");
 const { tmpdir } = require("node:os");
 const { dirname, join } = require("node:path");
 const { variants } = require("./variants");
@@ -27,27 +33,6 @@ function assertCommandSucceeded(result, description) {
     0,
     `${description} failed.\n${commandOutput(result)}`,
   );
-}
-
-function assertGnuBreSelection(result, description) {
-  assertCommandSucceeded(result, description);
-  assert.match(result.stdout, /\(clear_command\b/);
-  assert.match(result.stdout, /\(regex_literal\b/);
-  assert.doesNotMatch(result.stdout, /\(regex_group_open\b/);
-}
-
-function assertNoLanguageSelected(result, description) {
-  if (result.error) {
-    throw new Error(`Failed to test ${description}.`, {
-      cause: result.error,
-    });
-  }
-  assert.notEqual(
-    result.status,
-    0,
-    `${description} unexpectedly selected a language.\n${commandOutput(result)}`,
-  );
-  assert.match(commandOutput(result), /No language found/);
 }
 
 function main() {
@@ -86,48 +71,25 @@ function main() {
         windowsHide: true,
       });
 
-    const gnuBreBody = "z\ns/(a)/x/\n";
-    const extensionFixture = join(fixtureDirectory, "extension.sed");
-    const sedShebangFixture = join(fixtureDirectory, "sed-script");
-    const gsedShebangFixture = join(fixtureDirectory, "gsed-script");
-    const ereShebangFixture = join(fixtureDirectory, "ere-script");
-    const shellWithSedArgumentFixture = join(
-      fixtureDirectory,
-      "shell-with-sed-argument",
-    );
     const highlightFixture = join(fixtureDirectory, "highlight-input");
 
-    writeFileSync(extensionFixture, gnuBreBody);
-    writeFileSync(sedShebangFixture, `#!/usr/bin/sed\n${gnuBreBody}`);
-    writeFileSync(gsedShebangFixture, `#!/usr/bin/env gsed\n${gnuBreBody}`);
-    writeFileSync(ereShebangFixture, `#!/usr/bin/sed -E\n${gnuBreBody}`);
-    writeFileSync(
-      shellWithSedArgumentFixture,
-      `#!/bin/sh /usr/bin/sed\n${gnuBreBody}`,
-    );
     writeFileSync(highlightFixture, "s/(a)+/x/\n");
 
-    assertGnuBreSelection(
-      run(["parse", "--no-ranges", extensionFixture]),
-      "select GNU BRE for a .sed file",
-    );
-    assertGnuBreSelection(
-      run(["parse", "--no-ranges", sedShebangFixture]),
-      "select GNU BRE for an option-free sed shebang",
-    );
-    assertGnuBreSelection(
-      run(["parse", "--no-ranges", gsedShebangFixture]),
-      "select GNU BRE for an option-free gsed shebang",
-    );
+    const annotatedHighlightDirectory = join(root, "test", "fixtures");
+    for (const file of readdirSync(annotatedHighlightDirectory).sort()) {
+      assertCommandSucceeded(
+        run([
+          "highlight",
+          "--check",
+          "--quiet",
+          "--scope",
+          "source.sed.gnu.bre",
+          join(annotatedHighlightDirectory, file),
+        ]),
+        `check highlighting assertions in ${file}`,
+      );
+    }
 
-    assertNoLanguageSelected(
-      run(["parse", "--no-ranges", ereShebangFixture]),
-      "sed -E shebang",
-    );
-    assertNoLanguageSelected(
-      run(["parse", "--no-ranges", shellWithSedArgumentFixture]),
-      "non-sed interpreter with a sed argument",
-    );
     for (const { dialect, regexMode } of variants) {
       const scope = `source.sed.${dialect}.${regexMode}`;
       assertCommandSucceeded(

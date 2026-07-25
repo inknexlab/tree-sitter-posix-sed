@@ -8,13 +8,11 @@
       "scope": "source.sed.gnu.bre",
       "path": "gnu-bre",
       "external-files": ["common/scanner.h"],
-      "file-types": ["sed"],
       "highlights": [
         "queries/highlights.common.scm",
         "queries/highlights.gnu.scm"
       ],
-      "first-line-regex": "^#![ \\t]*(?:[^ \\t]*/)?(?:g?sed|env[ \\t]+(?:[^ \\t]*/)?g?sed)[ \\t]*$",
-      "injection-regex": "^(g?sed|sed_gnu_bre)$"
+      "injection-regex": "^sed_gnu_bre$"
     },
     {
       "name": "sed_gnu_ere",
