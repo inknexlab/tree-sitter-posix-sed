@@ -4,7 +4,7 @@
 
 [Tree-sitter](https://tree-sitter.github.io/tree-sitter/) grammars for
 POSIX.1-2024 and GNU `sed` 4.10, with separate languages for Basic Regular
-Expressions (BREs) and Extended Regular Expressions (EREs).
+Expression (BRE) and Extended Regular Expression (ERE) syntax.
 
 ![A POSIX ERE sed script with syntax highlighting in Emacs](assets/highlight-preview.png)
 
