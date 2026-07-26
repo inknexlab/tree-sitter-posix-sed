@@ -6,9 +6,9 @@
 POSIX.1-2024 and GNU `sed` 4.10, with separate languages for Basic Regular
 Expressions (BREs) and Extended Regular Expressions (EREs).
 
-![A POSIX sed script with syntax highlighting in Emacs](assets/highlight-preview.png)
+![A POSIX ERE sed script with syntax highlighting in Emacs](assets/highlight-preview.png)
 
-_POSIX `sed` syntax highlighting in a customized Emacs setup._
+_POSIX ERE `sed` syntax highlighting in a customized Emacs setup._
 
 ## Grammars
 
