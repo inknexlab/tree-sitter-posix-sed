@@ -59,6 +59,12 @@ vim.treesitter.language.register('sed_posix_bre', { 'sed' })
 Install it with `:TSInstall sed_posix_bre`. Use the directory and language
 names in the table above for the other three grammars.
 
+## Language server
+
+[sed-language-server](https://github.com/inknexlab/sed-language-server) uses
+these grammars to provide diagnostics, formatting, and label navigation
+through the Language Server Protocol.
+
 ## Specifications
 
 - [POSIX.1-2024 `sed`](https://pubs.opengroup.org/onlinepubs/9799919799.2024edition/utilities/sed.html)
