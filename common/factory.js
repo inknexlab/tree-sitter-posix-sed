@@ -596,13 +596,19 @@ function defineGrammar(name, dialect, regexMode) {
 
       _known_command_tail: () =>
         syntaxCapabilities.trailingComment
-          ? token.immediate(prec(-1, /[ \t]*[^ \t;#}\r\n][^;#}\r\n]*/))
-          : token.immediate(prec(-1, /[ \t]*[^ \t;\r\n][^;\r\n]*/)),
+          ? token.immediate(
+              prec(-1, /[[:blank:]]*[^[:blank:];#}\r\n][^;#}\r\n]*/),
+            )
+          : token.immediate(prec(-1, /[[:blank:]]*[^[:blank:];\r\n][^;\r\n]*/)),
 
       _known_block_command_tail: () =>
         syntaxCapabilities.trailingComment
-          ? token.immediate(prec(100, /[ \t]*[^ \t;#}\r\n][^;#}\r\n]*/))
-          : token.immediate(prec(100, /[ \t]*[^ \t;}\r\n][^;}\r\n]*/)),
+          ? token.immediate(
+              prec(100, /[[:blank:]]*[^[:blank:];#}\r\n][^;#}\r\n]*/),
+            )
+          : token.immediate(
+              prec(100, /[[:blank:]]*[^[:blank:];}\r\n][^;}\r\n]*/),
+            ),
 
       _line_end: ($) => seq(optional($._blanks), $._line_separator),
 
@@ -617,11 +623,11 @@ function defineGrammar(name, dialect, regexMode) {
 
       _block_semicolon_separator: ($) => semicolonSeparator($),
 
-      _blanks: () => token(/[ \t]+/),
+      _blanks: () => token(/[[:blank:]]+/),
 
       _newline: () => token(/\r?\n/),
 
-      invalid_command: () => token(prec(-1, /[^\s0-9$/\\!;{}#]/)),
+      invalid_command: () => token(prec(-1, /[^[:space:][:digit:]$\/\\!;{}#]/)),
 
       unexpected_text: () =>
         syntaxCapabilities.trailingComment
@@ -658,7 +664,7 @@ function defineGrammar(name, dialect, regexMode) {
 
       address: ($) => syntaxRuleChoice($, syntaxCapabilities.addressRules),
 
-      line_number_address: () => /0*[1-9]\d*/,
+      line_number_address: () => /0*[1-9][[:digit:]]*/,
 
       last_line_address: () => "$",
 
@@ -1029,8 +1035,8 @@ function defineGrammar(name, dialect, regexMode) {
 
       invalid_flag: () =>
         syntaxCapabilities.trailingComment
-          ? token(prec(-1, /[^w \t;#}\r\n]/))
-          : token(prec(-1, /[^w \t;}\r\n]/)),
+          ? token(prec(-1, /[^w[:blank:];#}\r\n]/))
+          : token(prec(-1, /[^w[:blank:];}\r\n]/)),
 
       occurrence_flag: () =>
         new RegExp(substituteFlagDefinition("occurrence_flag").pattern),

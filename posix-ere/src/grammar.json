@@ -690,7 +690,7 @@
         "value": -1,
         "content": {
           "type": "PATTERN",
-          "value": "[ \\t]*[^ \\t;\\r\\n][^;\\r\\n]*"
+          "value": "[[:blank:]]*[^[:blank:];\\r\\n][^;\\r\\n]*"
         }
       }
     },
@@ -701,7 +701,7 @@
         "value": 100,
         "content": {
           "type": "PATTERN",
-          "value": "[ \\t]*[^ \\t;}\\r\\n][^;}\\r\\n]*"
+          "value": "[[:blank:]]*[^[:blank:];}\\r\\n][^;}\\r\\n]*"
         }
       }
     },
@@ -845,7 +845,7 @@
       "type": "TOKEN",
       "content": {
         "type": "PATTERN",
-        "value": "[ \\t]+"
+        "value": "[[:blank:]]+"
       }
     },
     "_newline": {
@@ -862,7 +862,7 @@
         "value": -1,
         "content": {
           "type": "PATTERN",
-          "value": "[^\\s0-9$/\\\\!;{}#]"
+          "value": "[^[:space:][:digit:]$\\/\\\\!;{}#]"
         }
       }
     },
@@ -1424,7 +1424,7 @@
     },
     "line_number_address": {
       "type": "PATTERN",
-      "value": "0*[1-9]\\d*"
+      "value": "0*[1-9][[:digit:]]*"
     },
     "last_line_address": {
       "type": "STRING",
@@ -2948,13 +2948,13 @@
         "value": -1,
         "content": {
           "type": "PATTERN",
-          "value": "[^w \\t;}\\r\\n]"
+          "value": "[^w[:blank:];}\\r\\n]"
         }
       }
     },
     "occurrence_flag": {
       "type": "PATTERN",
-      "value": "\\d+"
+      "value": "[[:digit:]]+"
     },
     "global_flag": {
       "type": "STRING",
