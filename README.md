@@ -40,6 +40,9 @@ Install this repository as a Neovim package, then run:
 (treesit-install-language-grammar 'sed)
 ```
 
+Emacs does not include a Tree-sitter major mode for `sed`; this installs the
+parser for a custom mode or another package to use.
+
 ## Variants
 
 `sed` is GNU `sed` 4.10 using Basic Regular Expressions (BRE). If a project
@@ -80,6 +83,9 @@ Choose the language and directory from the table. For example, POSIX BRE uses
 
 (treesit-install-language-grammar 'sed_posix_bre)
 ```
+
+As with the standard parser, use the installed language from a custom mode or
+another package.
 
 ## Language server
 
