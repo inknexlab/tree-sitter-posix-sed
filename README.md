@@ -3,41 +3,62 @@
 [![CI](https://github.com/inknexlab/tree-sitter-sed/actions/workflows/ci.yml/badge.svg)](https://github.com/inknexlab/tree-sitter-sed/actions/workflows/ci.yml)
 
 [Tree-sitter](https://tree-sitter.github.io/tree-sitter/) grammars for
-POSIX.1-2024 and GNU `sed` 4.10, with separate languages for Basic Regular
-Expression (BRE) and Extended Regular Expression (ERE) syntax.
+POSIX.1-2024 `sed` and GNU `sed` 4.10.
 
-![A POSIX ERE sed script with syntax highlighting in Emacs](assets/highlight-preview.png)
+![A sed script with syntax highlighting in Emacs](assets/highlight-preview.png)
 
-_POSIX ERE `sed` syntax highlighting in a customized Emacs setup._
+_`sed` syntax highlighting in a customized Emacs setup._
 
-## Grammars
+## Usage
 
-| Dialect | Mode | Directory | Language | Scope |
+### Neovim
+
+Install this repository as a Neovim package alongside
+[nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter). It
+registers the parser definitions automatically and supplies the runtime
+queries. Then install the conventional parser:
+
+```vim
+:TSInstall sed
+```
+
+### Emacs
+
+```elisp
+(add-to-list
+ 'treesit-language-source-alist
+ '(sed . ("https://github.com/inknexlab/tree-sitter-sed")))
+
+(treesit-install-language-grammar 'sed)
+```
+
+## Variants
+
+`sed` is GNU `sed` 4.10 using Basic Regular Expressions (BRE). If a project
+needs POSIX syntax or Extended Regular Expressions (ERE), choose an explicit
+language instead.
+
+| Dialect | Regex mode | Directory | Language | Scope |
 | --- | --- | --- | --- | --- |
 | GNU `sed` 4.10 | BRE | `gnu-bre` | `sed_gnu_bre` | `source.sed.gnu.bre` |
 | GNU `sed` 4.10 | ERE | `gnu-ere` | `sed_gnu_ere` | `source.sed.gnu.ere` |
 | POSIX.1-2024 `sed` | BRE | `posix-bre` | `sed_posix_bre` | `source.sed.posix.bre` |
 | POSIX.1-2024 `sed` | ERE | `posix-ere` | `sed_posix_ere` | `source.sed.posix.ere` |
 
-### Regular expression CST
+### Neovim
 
-Regular expressions expose punctuation that consumers commonly need for
-highlighting without requiring them to rescan `regex_literal` text:
+Neovim registers these parser names too, so they can be installed with commands
+such as `:TSInstall sed_posix_bre`. To use one for `sed` buffers, map that
+parser deliberately:
 
-- `regex_beginning_anchor`, `regex_end_anchor`, and `regex_wildcard`
-- `regex_quoted_escape` and the sed-specific `regex_newline_escape`
-- `regex_bracket_delimiter`, `regex_bracket_negation`,
-  `regex_bracket_hyphen`, and one-code-point `regex_bracket_literal` nodes
-
-`bracket_expression` provides `opening_delimiter`, optional `negation`, and
-optional `closing_delimiter` fields. POSIX character classes, collating
-symbols, and equivalence classes retain their dedicated nodes.
-
-## Usage
-
-Choose one of the four grammars using its directory and language names.
+```lua
+vim.treesitter.language.register('sed_posix_bre', { 'sed' })
+```
 
 ### Emacs
+
+Choose the language and directory from the table. For example, POSIX BRE uses
+`sed_posix_bre` and `posix-bre/src`:
 
 ```elisp
 (add-to-list
@@ -50,28 +71,11 @@ Choose one of the four grammars using its directory and language names.
 (treesit-install-language-grammar 'sed_posix_bre)
 ```
 
-### Neovim
-
-With [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter):
-
-```lua
-vim.api.nvim_create_autocmd('User', {
-  pattern = 'TSUpdate',
-  callback = function()
-    require('nvim-treesitter.parsers').sed_posix_bre = {
-      install_info = {
-        url = 'https://github.com/inknexlab/tree-sitter-sed',
-        location = 'posix-bre',
-      },
-    }
-  end,
-})
-
-vim.treesitter.language.register('sed_posix_bre', { 'sed' })
-```
-
-Install it with `:TSInstall sed_posix_bre`. Use the directory and language
-names in the table above for the other three grammars.
+Only one parser should be mapped to the `sed` filetype at a time. Each language
+has Neovim-ready highlight, fold, and block-indent queries. GNU languages also
+inject the `shell_argument` of an `e` command as Bash-compatible shell source.
+No locals query is provided because sed labels are script-wide rather than
+lexically scoped locals.
 
 ## Language server
 
