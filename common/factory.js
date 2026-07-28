@@ -95,7 +95,12 @@ function defineGrammar(name, dialect, regexMode) {
   function regexTokenChoice($) {
     const tokens = [
       $.regex_literal,
+      $.regex_beginning_anchor,
+      $.regex_end_anchor,
+      $.regex_wildcard,
       $.regex_escape,
+      $.regex_quoted_escape,
+      $.regex_newline_escape,
       $.escaped_delimiter,
       $.escaped_newline,
       $.regex_group_open,
@@ -123,8 +128,10 @@ function defineGrammar(name, dialect, regexMode) {
 
   function bracketTokenChoice($) {
     const tokens = [
-      $.regex_literal,
+      $.regex_bracket_literal,
+      $.regex_bracket_hyphen,
       $.regex_escape,
+      $.regex_quoted_escape,
       $.escaped_delimiter,
       $.escaped_newline,
       $.incomplete_escape,
@@ -408,7 +415,12 @@ function defineGrammar(name, dialect, regexMode) {
       $._translate_middle,
       $._translate_end,
       $._regex_literal,
+      $._regex_beginning_anchor,
+      $._regex_end_anchor,
+      $._regex_wildcard,
       $._regex_escape,
+      $._regex_quoted_escape,
+      $._regex_newline_escape,
       $._regex_escaped_delimiter,
       $._regex_escaped_newline,
       $._regex_group_open,
@@ -421,6 +433,9 @@ function defineGrammar(name, dialect, regexMode) {
       $._regex_backreference,
       $._regex_bracket_open,
       $._regex_bracket_close,
+      $._regex_bracket_literal,
+      $._regex_bracket_negation,
+      $._regex_bracket_hyphen,
       $._regex_posix_character_class,
       $._regex_collating_symbol,
       $._regex_equivalence_class,
@@ -709,7 +724,17 @@ function defineGrammar(name, dialect, regexMode) {
 
       regex_literal: ($) => $._regex_literal,
 
+      regex_beginning_anchor: ($) => $._regex_beginning_anchor,
+
+      regex_end_anchor: ($) => $._regex_end_anchor,
+
+      regex_wildcard: ($) => $._regex_wildcard,
+
       regex_escape: ($) => $._regex_escape,
+
+      regex_quoted_escape: ($) => $._regex_quoted_escape,
+
+      regex_newline_escape: ($) => $._regex_newline_escape,
 
       escaped_delimiter: ($) =>
         choice(
@@ -750,14 +775,27 @@ function defineGrammar(name, dialect, regexMode) {
 
       bracket_expression: ($) =>
         seq(
-          $._regex_bracket_open,
+          field(
+            "opening_delimiter",
+            alias($._regex_bracket_open, $.regex_bracket_delimiter),
+          ),
+          optional(field("negation", $.regex_bracket_negation)),
           repeat(bracketTokenChoice($)),
           choice(
-            $._regex_bracket_close,
+            field(
+              "closing_delimiter",
+              alias($._regex_bracket_close, $.regex_bracket_delimiter),
+            ),
             alias($._regex_unterminated_address, $.unclosed_bracket),
             alias($._regex_unterminated_substitute, $.unclosed_bracket),
           ),
         ),
+
+      regex_bracket_literal: ($) => $._regex_bracket_literal,
+
+      regex_bracket_negation: ($) => $._regex_bracket_negation,
+
+      regex_bracket_hyphen: ($) => $._regex_bracket_hyphen,
 
       posix_character_class: ($) => $._regex_posix_character_class,
 
