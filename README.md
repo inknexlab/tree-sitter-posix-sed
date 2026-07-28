@@ -7,11 +7,11 @@ POSIX.1-2024 `sed` and GNU `sed` 4.10.
 
 ![A sed script with syntax highlighting in Neovim](assets/neovim-preview.png)
 
-_`sed` syntax highlighting in Neovim._
+_An example of GNU `sed` syntax highlighting in Neovim._
 
 ![A POSIX ERE sed script with syntax highlighting in Emacs](assets/emacs-preview.png)
 
-_POSIX ERE `sed` syntax highlighting in Emacs._
+_An example of POSIX ERE `sed` syntax highlighting in Emacs._
 
 ## Neovim features
 
