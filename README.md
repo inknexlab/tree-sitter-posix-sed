@@ -5,18 +5,26 @@
 [Tree-sitter](https://tree-sitter.github.io/tree-sitter/) grammars for
 POSIX.1-2024 `sed` and GNU `sed` 4.10.
 
-![A sed script with syntax highlighting in Emacs](assets/highlight-preview.png)
+![A sed script with syntax highlighting in Neovim](assets/neovim-preview.png)
 
-_`sed` syntax highlighting in a customized Emacs setup._
+_`sed` syntax highlighting in Neovim._
+
+![A POSIX ERE sed script with syntax highlighting in Emacs](assets/emacs-preview.png)
+
+_POSIX ERE `sed` syntax highlighting in Emacs._
+
+## Neovim features
+
+- Syntax highlighting
+- Code folding
+- Block indentation
+- Bash-compatible shell injection for GNU `e` command arguments
 
 ## Usage
 
 ### Neovim
 
-Install this repository as a Neovim package alongside
-[nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter). It
-registers the parser definitions automatically and supplies the runtime
-queries. Then install the conventional parser:
+Install this repository as a Neovim package, then run:
 
 ```vim
 :TSInstall sed
@@ -55,6 +63,8 @@ parser deliberately:
 vim.treesitter.language.register('sed_posix_bre', { 'sed' })
 ```
 
+In Neovim, only one parser should be mapped to the `sed` filetype at a time.
+
 ### Emacs
 
 Choose the language and directory from the table. For example, POSIX BRE uses
@@ -70,12 +80,6 @@ Choose the language and directory from the table. For example, POSIX BRE uses
 
 (treesit-install-language-grammar 'sed_posix_bre)
 ```
-
-Only one parser should be mapped to the `sed` filetype at a time. Each language
-has Neovim-ready highlight, fold, and block-indent queries. GNU languages also
-inject the `shell_argument` of an `e` command as Bash-compatible shell source.
-No locals query is provided because sed labels are script-wide rather than
-lexically scoped locals.
 
 ## Language server
 
