@@ -8,6 +8,5 @@
 // @ts-check
 
 const defineGrammar = require("../common/factory");
-const posix = require("../common/posix");
 
-module.exports = defineGrammar("sed_posix_ere", posix, "ere");
+module.exports = defineGrammar("posix_sed_ere", "ere");
