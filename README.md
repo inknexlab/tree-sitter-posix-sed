@@ -1,7 +1,7 @@
 # tree-sitter-sed
 
 [Tree-sitter](https://tree-sitter.github.io/tree-sitter/) grammars for
-POSIX.1-2024 `sed`, with separate languages for BRE and ERE syntax.
+POSIX.1-2024 `sed` syntax, with separate languages for BRE and ERE.
 
 ## Languages
 
