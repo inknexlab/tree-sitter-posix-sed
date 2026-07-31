@@ -111,49 +111,49 @@ function assertIncrementalEqualsFull(language, source, makeEdits) {
 test("dynamic delimiter edits restore every scanner mode", async (t) => {
   const cases = [
     {
-      variant: "posix-bre",
+      variant: "posix-sed-bre",
       name: "BRE substitution",
       source: "s|ab|cd|g\n",
       before: "s|ab|cd|",
       after: "s#ab#cd#",
     },
     {
-      variant: "posix-bre",
+      variant: "posix-sed-bre",
       name: "BRE escaped delimiter",
       source: "s#\\|#x#\n",
       before: "s#\\|#x#",
       after: "s|\\||x|",
     },
     {
-      variant: "posix-bre",
+      variant: "posix-sed-bre",
       name: "BRE context address",
       source: "\\|ab|p\n",
       before: "\\|ab|",
       after: "\\#ab#",
     },
     {
-      variant: "posix-bre",
+      variant: "posix-sed-bre",
       name: "BRE translation",
       source: "y|ab|cd|\n",
       before: "y|ab|cd|",
       after: "y#ab#cd#",
     },
     {
-      variant: "posix-ere",
+      variant: "posix-sed-ere",
       name: "ERE substitution",
       source: "s|a+?|cd|g\n",
       before: "s|a+?|cd|",
       after: "s#a+?#cd#",
     },
     {
-      variant: "posix-ere",
+      variant: "posix-sed-ere",
       name: "ERE context address",
       source: "\\|a+?|p\n",
       before: "\\|a+?|",
       after: "\\#a+?#",
     },
     {
-      variant: "posix-ere",
+      variant: "posix-sed-ere",
       name: "ERE translation",
       source: "y|ab|cd|\n",
       before: "y|ab|cd|",
@@ -176,55 +176,55 @@ test("dynamic delimiter edits restore every scanner mode", async (t) => {
 test("edits between recovery and canonical syntax match full parses", () => {
   const cases = [
     {
-      variant: "posix-bre",
+      variant: "posix-sed-bre",
       source: "s|a|b\np\n",
       search: "b\n",
       replacement: "b|\n",
     },
     {
-      variant: "posix-ere",
+      variant: "posix-sed-ere",
       source: "/(ab/p\n",
       search: "ab/",
       replacement: "ab)/",
     },
     {
-      variant: "posix-ere",
+      variant: "posix-sed-ere",
       source: "/a{2/p\n",
       search: "2/",
       replacement: "2}/",
     },
     {
-      variant: "posix-ere",
+      variant: "posix-sed-ere",
       source: "/[a-[:alpha:]]/p\n",
       search: "[:alpha:]",
       replacement: "[.z.]",
     },
     {
-      variant: "posix-bre",
+      variant: "posix-sed-bre",
       source: "1, 2p\n",
       search: ", ",
       replacement: ",",
     },
     {
-      variant: "posix-bre",
+      variant: "posix-sed-bre",
       source: "1,2,3p\n",
       search: ",3",
       replacement: "",
     },
     {
-      variant: "posix-bre",
+      variant: "posix-sed-bre",
       source: "b;p\n",
       search: "b",
       replacement: "p",
     },
     {
-      variant: "posix-bre",
+      variant: "posix-sed-bre",
       source: "{ }\np\n",
       search: " ",
       replacement: ";",
     },
     {
-      variant: "posix-bre",
+      variant: "posix-sed-bre",
       source: "a\\\ntext\\\n",
       search: "text\\\n",
       replacement: "text\n",
@@ -248,19 +248,19 @@ test("edits between recovery and canonical syntax match full parses", () => {
 
 test("multiline operand edits match full parses", () => {
   assertIncrementalEqualsFull(
-    languages["posix-bre"],
+    languages["posix-sed-bre"],
     "a\\\nhello\\\nworld\np\n",
     (source) => [replace(source, "hello", "greeting")],
   );
 
   assertIncrementalEqualsFull(
-    languages["posix-bre"],
+    languages["posix-sed-bre"],
     "s|a|first\\\nsecond|\np\n",
     (source) => [replace(source, "first", "updated")],
   );
 
   assertIncrementalEqualsFull(
-    languages["posix-bre"],
+    languages["posix-sed-bre"],
     "y|ab|cd|\np\n",
     (source) => [replace(source, "ab", "a\\n")],
   );
@@ -268,7 +268,7 @@ test("multiline operand edits match full parses", () => {
 
 test("substitution flag edits match full parses", () => {
   const tree = assertIncrementalEqualsFull(
-    languages["posix-bre"],
+    languages["posix-sed-bre"],
     "s/a/b/giw output\n",
     (source) => [replace(source, "gi", "gip")],
   );
@@ -285,67 +285,67 @@ test("substitution flag edits match full parses", () => {
 test("regular-expression state edits match full parses", () => {
   const cases = [
     {
-      variant: "posix-bre",
+      variant: "posix-sed-bre",
       source: "/\\(a\\)/p\n",
       search: "\\)",
       replacement: "",
     },
     {
-      variant: "posix-ere",
+      variant: "posix-sed-ere",
       source: "/[[.].]]/p\n",
       search: "]",
       replacement: "a",
     },
     {
-      variant: "posix-ere",
+      variant: "posix-sed-ere",
       source: "/[.a.]/p\n",
       search: "a.",
       replacement: "a:",
     },
     {
-      variant: "posix-ere",
+      variant: "posix-sed-ere",
       source: "/a*b/p\n",
       search: "*",
       replacement: "*?",
     },
     {
-      variant: "posix-ere",
+      variant: "posix-sed-ere",
       source: "/a*?/p\n",
       search: "*?",
       replacement: "*+",
     },
     {
-      variant: "posix-ere",
+      variant: "posix-sed-ere",
       source: "/a*{2}/p\n",
       search: "{2}",
       replacement: "+??",
     },
     {
-      variant: "posix-bre",
+      variant: "posix-sed-bre",
       source: "/a*\\{2\\}/p\n",
       search: "*",
       replacement: "b",
     },
     {
-      variant: "posix-bre",
+      variant: "posix-sed-bre",
       source: "/a\\{255\\}/p\n",
       search: "255",
       replacement: "999999999999999999999999",
     },
     {
-      variant: "posix-bre",
+      variant: "posix-sed-bre",
       source: "/^a/p\n",
       search: "a",
       replacement: "^",
     },
     {
-      variant: "posix-ere",
+      variant: "posix-sed-ere",
       source: "/[[.a.]]/p\n",
       search: "a",
       replacement: "ch",
     },
     {
-      variant: "posix-bre",
+      variant: "posix-sed-bre",
       source: "/[%--]/p\n",
       search: "-]",
       replacement: "@]",
@@ -361,7 +361,7 @@ test("regular-expression state edits match full parses", () => {
 
 test("incremental ranges remain UTF-16 based for atomic characters", () => {
   const tree = assertIncrementalEqualsFull(
-    languages["posix-bre"],
+    languages["posix-sed-bre"],
     "/cat/p\n",
     (source) => [replace(source, "cat", "😺犬")],
   );

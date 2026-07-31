@@ -6,7 +6,7 @@
       "camelcase": "PosixSedBre",
       "title": "POSIX sed (BRE)",
       "scope": "source.sed.posix.bre",
-      "path": "posix-bre",
+      "path": "posix-sed-bre",
       "external-files": ["common/scanner.h"]
     },
     {
@@ -14,7 +14,7 @@
       "camelcase": "PosixSedEre",
       "title": "POSIX sed (ERE)",
       "scope": "source.sed.posix.ere",
-      "path": "posix-ere",
+      "path": "posix-sed-ere",
       "external-files": ["common/scanner.h"]
     }
   ],
@@ -28,7 +28,7 @@
       }
     ],
     "links": {
-      "repository": "https://github.com/inknexlab/tree-sitter-sed"
+      "repository": "https://github.com/inknexlab/tree-sitter-posix-sed"
     }
   },
   "bindings": {

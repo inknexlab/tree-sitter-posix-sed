@@ -88,7 +88,7 @@ test("the Wasm modules expose the canonical editing-command structure", () => {
     assert.equal(substitute?.type, "substitute_function");
     assert.equal(
       substitute.childForFieldName("expression")?.type,
-      id === "posix-bre" ? "basic_reg_exp" : "extended_reg_exp",
+      id === "posix-sed-bre" ? "basic_reg_exp" : "extended_reg_exp",
     );
     assert.deepEqual(
       ["opening", "middle", "closing"].map(
@@ -130,14 +130,14 @@ test("every POSIX editing function remains a specific function node", () => {
   ];
 
   for (const [source, expected] of cases) {
-    const tree = parse("posix-bre", source);
+    const tree = parse("posix-sed-bre", source);
     assertPortable(tree);
     assert.equal(selectedFunctionTypes(tree)[0], expected, source);
   }
 });
 
 test("substitution, translation, and text operands expose their atoms", () => {
-  const substitution = parse("posix-bre", "s|a|x&\\0\\1\\||g\n");
+  const substitution = parse("posix-sed-bre", "s|a|x&\\0\\1\\||g\n");
   assertPortable(substitution);
   assert.deepEqual(
     only(substitution, "replacement").namedChildren.map(({ type }) => type),
@@ -150,7 +150,7 @@ test("substitution, translation, and text operands expose their atoms", () => {
     ],
   );
 
-  const replacementEscapes = parse("posix-bre", "s|a|\\&\\\\|\n");
+  const replacementEscapes = parse("posix-sed-bre", "s|a|\\&\\\\|\n");
   assertPortable(replacementEscapes);
   assert.deepEqual(
     nodes(replacementEscapes, "replacement_escape").map(({ text }) => text),
@@ -158,7 +158,7 @@ test("substitution, translation, and text operands expose their atoms", () => {
   );
 
   const escapedReplacementNewline = parse(
-    "posix-bre",
+    "posix-sed-bre",
     "s|a|first\\\nsecond|\n",
   );
   assertPortable(escapedReplacementNewline);
@@ -167,7 +167,7 @@ test("substitution, translation, and text operands expose their atoms", () => {
     ["\\\n"],
   );
 
-  const translation = parse("posix-bre", "y|a\\n\\||b\\\\c|\n");
+  const translation = parse("posix-sed-bre", "y|a\\n\\||b\\\\c|\n");
   assertPortable(translation);
   assert.deepEqual(
     nodes(translation, "translation_string").map((string) =>
@@ -183,7 +183,7 @@ test("substitution, translation, and text operands expose their atoms", () => {
     ],
   );
 
-  const text = parse("posix-bre", "a\\\nfirst\\\\second\\\nthird\n");
+  const text = parse("posix-sed-bre", "a\\\nfirst\\\\second\\\nthird\n");
   assertPortable(text);
   assert.deepEqual(
     only(text, "text").namedChildren.map(({ type }) => type),
@@ -248,7 +248,7 @@ test("a continued text operand requires a following physical line", () => {
 });
 
 test("BRE nodes mirror the POSIX production hierarchy", () => {
-  const tree = parse("posix-bre", "s#^\\(ab*\\)\\{2,3\\}\\1$#x#\n");
+  const tree = parse("posix-sed-bre", "s#^\\(ab*\\)\\{2,3\\}\\1$#x#\n");
   assertPortable(tree);
 
   const expression = only(tree, "substitute_function").childForFieldName(
@@ -298,7 +298,7 @@ test("BRE nodes mirror the POSIX production hierarchy", () => {
     ["\\{", "2", ",", "3", "\\}"],
   );
 
-  const repeatedAnchorCharacter = parse("posix-bre", "/^^/p\n");
+  const repeatedAnchorCharacter = parse("posix-sed-bre", "/^^/p\n");
   assertPortable(repeatedAnchorCharacter);
   assert.deepEqual(
     nodes(repeatedAnchorCharacter, "left_anchor").map(({ text }) => text),
@@ -311,7 +311,7 @@ test("BRE nodes mirror the POSIX production hierarchy", () => {
     ["^"],
   );
 
-  const repeatedSubexpressionAnchor = parse("posix-bre", "/\\(^^\\)/p\n");
+  const repeatedSubexpressionAnchor = parse("posix-sed-bre", "/\\(^^\\)/p\n");
   assertNoNativeError(repeatedSubexpressionAnchor);
   assert.deepEqual(issueReasons(repeatedSubexpressionAnchor), [
     "bre_subexpression_left_anchor",
@@ -325,15 +325,15 @@ test("BRE nodes mirror the POSIX production hierarchy", () => {
 });
 
 test("BRE delimiter escapes take precedence over BRE operators", () => {
-  const substitution = parse("posix-bre", "s|\\||x|\n");
+  const substitution = parse("posix-sed-bre", "s|\\||x|\n");
   assertPortable(substitution);
   assert.equal(only(substitution, "escaped_delimiter").text, "\\|");
 
-  const address = parse("posix-bre", "\\|\\||p\n");
+  const address = parse("posix-sed-bre", "\\|\\||p\n");
   assertPortable(address);
   assert.equal(only(address, "escaped_delimiter").text, "\\|");
 
-  const anchor = parse("posix-bre", "s|$\\||x|\n");
+  const anchor = parse("posix-sed-bre", "s|$\\||x|\n");
   assertPortable(anchor);
   assert.deepEqual(
     nodes(anchor, "ordinary_character").map(({ text }) => text),
@@ -341,7 +341,7 @@ test("BRE delimiter escapes take precedence over BRE operators", () => {
   );
   assert.equal(nodes(anchor, "right_anchor").length, 0);
 
-  const interval = parse("posix-bre", "s}a\\{1\\}}x}\n");
+  const interval = parse("posix-sed-bre", "s}a\\{1\\}}x}\n");
   assertNoNativeError(interval);
   assert.deepEqual(
     issueRecords(interval).map(({ outcome, reason }) => [outcome, reason]),
@@ -351,7 +351,7 @@ test("BRE delimiter escapes take precedence over BRE operators", () => {
 });
 
 test("BRE interval closes remain visible outside interval recovery", () => {
-  const unmatched = parse("posix-bre", "/\\}/p\n");
+  const unmatched = parse("posix-sed-bre", "/\\}/p\n");
   assertNoNativeError(unmatched);
   assert.deepEqual(issueRecords(unmatched), [
     {
@@ -363,18 +363,18 @@ test("BRE interval closes remain visible outside interval recovery", () => {
   assert.equal(only(unmatched, "back_close_brace").text, "\\}");
   assert.equal(nodes(unmatched, "quoted_character").length, 0);
 
-  const delimiterClose = parse("posix-bre", "s}a\\}}x}\n");
+  const delimiterClose = parse("posix-sed-bre", "s}a\\}}x}\n");
   assertPortable(delimiterClose);
   assert.equal(only(delimiterClose, "escaped_delimiter").text, "\\}");
   assert.equal(nodes(delimiterClose, "back_close_brace").length, 0);
 
-  const quotedEreClose = parse("posix-ere", "/\\}/p\n");
+  const quotedEreClose = parse("posix-sed-ere", "/\\}/p\n");
   assertPortable(quotedEreClose);
   assert.equal(only(quotedEreClose, "quoted_character").text, "\\}");
 });
 
 test("BRE duplication recovery preserves conditional tokens and intervals", () => {
-  const adjacent = parse("posix-bre", "/a*\\+b/p\n");
+  const adjacent = parse("posix-sed-bre", "/a*\\+b/p\n");
   assertNoNativeError(adjacent);
   assert.deepEqual(
     issueRecords(adjacent).map(({ outcome, reason }) => [outcome, reason]),
@@ -385,7 +385,7 @@ test("BRE duplication recovery preserves conditional tokens and intervals", () =
   );
   assert.equal(only(adjacent, "back_plus").text, "\\+");
 
-  const adjacentInterval = parse("posix-bre", "/a*\\{2\\}/p\n");
+  const adjacentInterval = parse("posix-sed-bre", "/a*\\{2\\}/p\n");
   assertNoNativeError(adjacentInterval);
   assert.deepEqual(issueReasons(adjacentInterval), [
     "adjacent_duplication_symbol",
@@ -402,7 +402,7 @@ test("BRE duplication recovery preserves conditional tokens and intervals", () =
     ["\\{", "2", "\\}"],
   );
 
-  const leadingInterval = parse("posix-bre", "/\\{2\\}/p\n");
+  const leadingInterval = parse("posix-sed-bre", "/\\{2\\}/p\n");
   assertNoNativeError(leadingInterval);
   assert.deepEqual(issueReasons(leadingInterval), [
     "leading_duplication_symbol",
@@ -421,7 +421,7 @@ test("BRE duplication recovery preserves conditional tokens and intervals", () =
 });
 
 test("ERE nodes expose alternation, duplication, and repetition modifiers", () => {
-  const tree = parse("posix-ere", "s#^(ab|c)+?d{2,3}?$#x#\n");
+  const tree = parse("posix-sed-ere", "s#^(ab|c)+?d{2,3}?$#x#\n");
   assertPortable(tree);
 
   assert.ok(nodes(tree, "extended_reg_exp").length > 0);
@@ -477,7 +477,7 @@ test("ERE nodes expose alternation, duplication, and repetition modifiers", () =
     ["{", "2", ",", "3", "}"],
   );
 
-  const unmatchedClose = parse("posix-ere", "/)/p\n");
+  const unmatchedClose = parse("posix-sed-ere", "/)/p\n");
   assertPortable(unmatchedClose);
   assert.deepEqual(
     nodes(unmatchedClose, "ordinary_character").map(({ text }) => text),
@@ -510,7 +510,7 @@ test("ERE duplication recovery preserves every operator and interval", () => {
   ];
 
   for (const { source, operators, modifiers } of cases) {
-    const tree = parse("posix-ere", source);
+    const tree = parse("posix-sed-ere", source);
     assertNoNativeError(tree);
     assert.deepEqual(
       issueRecords(tree).map(({ outcome, reason }) => [outcome, reason]),
@@ -530,7 +530,7 @@ test("ERE duplication recovery preserves every operator and interval", () => {
   }
 
   for (const source of ["/{2}/p\n", "/*?/p\n"]) {
-    const tree = parse("posix-ere", source);
+    const tree = parse("posix-sed-ere", source);
     assertNoNativeError(tree);
     assert.deepEqual(
       issueReasons(tree),
@@ -539,7 +539,7 @@ test("ERE duplication recovery preserves every operator and interval", () => {
     );
   }
 
-  const leadingInterval = parse("posix-ere", "/{2}/p\n");
+  const leadingInterval = parse("posix-sed-ere", "/{2}/p\n");
   const leadingOperator = only(
     leadingInterval,
     "leading_ere_dupl_symbol",
@@ -552,7 +552,7 @@ test("ERE duplication recovery preserves every operator and interval", () => {
     ["{", "2", "}"],
   );
 
-  const adjacentInterval = parse("posix-ere", "/a*{2}/p\n");
+  const adjacentInterval = parse("posix-sed-ere", "/a*{2}/p\n");
   const interval = nodes(adjacentInterval, "ere_dupl_symbol").find(
     (node) => node.childForFieldName("minimum") !== null,
   );
@@ -566,7 +566,7 @@ test("ERE duplication recovery preserves every operator and interval", () => {
 });
 
 test("bracket expressions expose every POSIX list and term production", () => {
-  const tree = parse("posix-bre", "/[^]a-c[:alpha:][.].][=a=]-]/p\n");
+  const tree = parse("posix-sed-bre", "/[^]a-c[:alpha:][.].][=a=]-]/p\n");
   assertPortable(tree);
 
   const bracket = only(tree, "bracket_expression");
@@ -671,52 +671,57 @@ test("range expressions retain both POSIX ending alternatives", () => {
 test("syntax issues have stable outcome and reason layers", () => {
   const cases = [
     [
-      "posix-ere",
+      "posix-sed-ere",
       "/[a-[:alpha:]]/p\n",
       "undefined_syntax",
       "character_class_range_end",
     ],
     [
-      "posix-ere",
+      "posix-sed-ere",
       "/[[:alpha:]-z]/p\n",
       "undefined_syntax",
       "character_class_range_start",
     ],
     [
-      "posix-bre",
+      "posix-sed-bre",
       "/[a-[=b=]]/p\n",
       "unspecified_syntax",
       "equivalence_class_range_end",
     ],
-    ["posix-bre", "/[[.x]/p\n", "undefined_syntax", "malformed_bracket_term"],
     [
-      "posix-bre",
+      "posix-sed-bre",
+      "/[[.x]/p\n",
+      "undefined_syntax",
+      "malformed_bracket_term",
+    ],
+    [
+      "posix-sed-bre",
       "/\\?/p\n",
       "implementation_defined_syntax",
       "bre_question_mark_escape",
     ],
     [
-      "posix-bre",
+      "posix-sed-bre",
       "/[[=a=]-z]/p\n",
       "unspecified_syntax",
       "equivalence_class_range_start",
     ],
-    ["posix-bre", ",p\n", "undefined_syntax", "omitted_address"],
-    ["posix-bre", "1! p\n", "unspecified_syntax", "blanks_after_negation"],
+    ["posix-sed-bre", ",p\n", "undefined_syntax", "omitted_address"],
+    ["posix-sed-bre", "1! p\n", "unspecified_syntax", "blanks_after_negation"],
     [
-      "posix-bre",
+      "posix-sed-bre",
       "rfile\n",
       "implementation_option_syntax",
       "omitted_file_separator",
     ],
     [
-      "posix-bre",
+      "posix-sed-bre",
       "a\\\ntext\\",
       "unspecified_syntax",
       "unspecified_text_escape",
     ],
-    ["posix-bre", "1,2q\n", "nonconforming_syntax", "excess_addresses"],
-    ["posix-bre", "r\n", "incomplete_syntax", "missing_rfile"],
+    ["posix-sed-bre", "1,2q\n", "nonconforming_syntax", "excess_addresses"],
+    ["posix-sed-bre", "r\n", "incomplete_syntax", "missing_rfile"],
   ];
 
   for (const [variant, source, outcome, reason] of cases) {
@@ -733,35 +738,35 @@ test("syntax issues have stable outcome and reason layers", () => {
 
 test("known recovery shapes preserve the following command", () => {
   const cases = [
-    ["posix-bre", ",p\np\n", "omitted_address"],
-    ["posix-bre", "1 2p\np\n", "missing_address_separator"],
-    ["posix-bre", "1 ,2p\np\n", "blanks_around_address_separator"],
-    ["posix-bre", "1, 2p\np\n", "blanks_around_address_separator"],
-    ["posix-bre", "1 , 2p\np\n", "blanks_around_address_separator"],
-    ["posix-bre", "1,2,3p\n", "additional_address"],
-    ["posix-bre", "1,2 3p\n", "additional_address"],
-    ["posix-bre", "1,2,p\n", "additional_address"],
-    ["posix-bre", "1,2q\np\n", "excess_addresses"],
-    ["posix-bre", "k tail\np\n", "unknown_function"],
-    ["posix-bre", "bfoo\np\n", "unexpected_command_text"],
-    ["posix-bre", "b;p\n", "forbidden_command_separator"],
-    ["posix-bre", "bfoo;p\n", "forbidden_command_separator"],
-    ["posix-bre", "b;;p\n", "forbidden_command_separator"],
-    ["posix-bre", "!!p\np\n", "duplicate_negation"],
-    ["posix-bre", "r \np\n", "missing_rfile"],
-    ["posix-bre", "s/a/b/w \np\n", "missing_wfile"],
-    ["posix-bre", "a \\\np\n", "missing_text_introducer"],
-    ["posix-bre", "s\\\np\n", "invalid_delimiter"],
-    ["posix-bre", "/[\np\n", "missing_bracket_list"],
-    ["posix-bre", "/[[.]/p\np\n", "malformed_bracket_term"],
-    ["posix-bre", "/a\\{1,2,3\\}/p\np\n", "malformed_interval"],
-    ["posix-bre", "\\2a\\{12p\n", "malformed_interval"],
-    ["posix-ere", "/[a-m-o]/p\np\n", "shared_range_endpoint"],
-    ["posix-ere", "/(\np\n", "missing_subexpression"],
-    ["posix-ere", "/(a\np\n", "unclosed_subexpression"],
-    ["posix-ere", "/a\\\np\n", "incomplete_regular_expression_escape"],
-    ["posix-ere", "\\2a{12p\n", "malformed_interval"],
-    ["posix-bre", "y/a/b\\\np\n", "undefined_translation_escape"],
+    ["posix-sed-bre", ",p\np\n", "omitted_address"],
+    ["posix-sed-bre", "1 2p\np\n", "missing_address_separator"],
+    ["posix-sed-bre", "1 ,2p\np\n", "blanks_around_address_separator"],
+    ["posix-sed-bre", "1, 2p\np\n", "blanks_around_address_separator"],
+    ["posix-sed-bre", "1 , 2p\np\n", "blanks_around_address_separator"],
+    ["posix-sed-bre", "1,2,3p\n", "additional_address"],
+    ["posix-sed-bre", "1,2 3p\n", "additional_address"],
+    ["posix-sed-bre", "1,2,p\n", "additional_address"],
+    ["posix-sed-bre", "1,2q\np\n", "excess_addresses"],
+    ["posix-sed-bre", "k tail\np\n", "unknown_function"],
+    ["posix-sed-bre", "bfoo\np\n", "unexpected_command_text"],
+    ["posix-sed-bre", "b;p\n", "forbidden_command_separator"],
+    ["posix-sed-bre", "bfoo;p\n", "forbidden_command_separator"],
+    ["posix-sed-bre", "b;;p\n", "forbidden_command_separator"],
+    ["posix-sed-bre", "!!p\np\n", "duplicate_negation"],
+    ["posix-sed-bre", "r \np\n", "missing_rfile"],
+    ["posix-sed-bre", "s/a/b/w \np\n", "missing_wfile"],
+    ["posix-sed-bre", "a \\\np\n", "missing_text_introducer"],
+    ["posix-sed-bre", "s\\\np\n", "invalid_delimiter"],
+    ["posix-sed-bre", "/[\np\n", "missing_bracket_list"],
+    ["posix-sed-bre", "/[[.]/p\np\n", "malformed_bracket_term"],
+    ["posix-sed-bre", "/a\\{1,2,3\\}/p\np\n", "malformed_interval"],
+    ["posix-sed-bre", "\\2a\\{12p\n", "malformed_interval"],
+    ["posix-sed-ere", "/[a-m-o]/p\np\n", "shared_range_endpoint"],
+    ["posix-sed-ere", "/(\np\n", "missing_subexpression"],
+    ["posix-sed-ere", "/(a\np\n", "unclosed_subexpression"],
+    ["posix-sed-ere", "/a\\\np\n", "incomplete_regular_expression_escape"],
+    ["posix-sed-ere", "\\2a{12p\n", "malformed_interval"],
+    ["posix-sed-bre", "y/a/b\\\np\n", "undefined_translation_escape"],
   ];
 
   for (const [variant, source, reason] of cases) {
@@ -774,7 +779,7 @@ test("known recovery shapes preserve the following command", () => {
     assert.equal(selectedFunctionTypes(tree).at(-1), "print_function", source);
   }
 
-  const recoveredBlock = parse("posix-bre", "{b;;p;}\n");
+  const recoveredBlock = parse("posix-sed-bre", "{b;;p;}\n");
   assertNoNativeError(recoveredBlock);
   assert.deepEqual(selectedFunctionTypes(recoveredBlock), [
     "block_function",
@@ -787,7 +792,10 @@ test("known recovery shapes preserve the following command", () => {
     ),
   );
 
-  const excessAddress = only(parse("posix-bre", "1,2,3p\n"), "excess_address");
+  const excessAddress = only(
+    parse("posix-sed-bre", "1,2,3p\n"),
+    "excess_address",
+  );
   assert.deepEqual(
     ["separator", "address"].map(
       (field) => excessAddress.childForFieldName(field)?.text,
@@ -869,7 +877,7 @@ test("POSIX ambiguity is exposed instead of selecting an implementation", () => 
     ["/\\?/p\n", "leading_duplication_symbol"],
     ["/a*\\?/p\n", "adjacent_duplication_symbol"],
   ]) {
-    const tree = parse("posix-bre", source);
+    const tree = parse("posix-sed-bre", source);
     assertNoNativeError(tree);
     assert.deepEqual(
       issueRecords(tree),
@@ -890,7 +898,7 @@ test("POSIX ambiguity is exposed instead of selecting an implementation", () => 
     assert.equal(only(tree, "back_qm").text, "\\?");
   }
 
-  const breAlternation = parse("posix-bre", "/a\\|b/p\n");
+  const breAlternation = parse("posix-sed-bre", "/a\\|b/p\n");
   assert.equal(
     only(breAlternation, "context_address")
       .childForFieldName("expression")
@@ -899,7 +907,7 @@ test("POSIX ambiguity is exposed instead of selecting an implementation", () => 
   );
   assert.equal(only(breAlternation, "back_bar").text, "\\|");
 
-  const duplicationAfterBreAlternation = parse("posix-bre", "/a\\|*/p\n");
+  const duplicationAfterBreAlternation = parse("posix-sed-bre", "/a\\|*/p\n");
   assertNoNativeError(duplicationAfterBreAlternation);
   assert.deepEqual(
     issueRecords(duplicationAfterBreAlternation).map(({ outcome, reason }) => [
@@ -932,7 +940,7 @@ test("POSIX ambiguity is exposed instead of selecting an implementation", () => 
     assertPortable(parse(variant, "/[::][_:.]/p\n"));
   }
 
-  const specialRegexDelimiter = parse("posix-ere", "\\*a\\**p\n");
+  const specialRegexDelimiter = parse("posix-sed-ere", "\\*a\\**p\n");
   assertNoNativeError(specialRegexDelimiter);
   assert.ok(
     issueRecords(specialRegexDelimiter).some(
@@ -942,7 +950,7 @@ test("POSIX ambiguity is exposed instead of selecting an implementation", () => 
     ),
   );
 
-  const ampersandReplacementDelimiter = parse("posix-bre", "s&a&\\&&\n");
+  const ampersandReplacementDelimiter = parse("posix-sed-bre", "s&a&\\&&\n");
   assertNoNativeError(ampersandReplacementDelimiter);
   assert.ok(
     issueRecords(ampersandReplacementDelimiter).some(
@@ -955,14 +963,14 @@ test("POSIX ambiguity is exposed instead of selecting an implementation", () => 
 
 test("semantic constraints remain outside the parser", () => {
   const cases = [
-    ["posix-bre", "/\\9/p\n"],
-    ["posix-bre", "y/aa/b/\n"],
-    ["posix-bre", ":same\n:same\nb absent\n"],
-    ["posix-bre", "s/a/b/g2\n"],
-    ["posix-bre", "//p\ns//x/\n"],
-    ["posix-bre", "/a\\{3,2\\}/p\n"],
-    ["posix-bre", "/a\\{999999999999999999999999\\}/p\n"],
-    ["posix-ere", "/a{3,2}/p\n"],
+    ["posix-sed-bre", "/\\9/p\n"],
+    ["posix-sed-bre", "y/aa/b/\n"],
+    ["posix-sed-bre", ":same\n:same\nb absent\n"],
+    ["posix-sed-bre", "s/a/b/g2\n"],
+    ["posix-sed-bre", "//p\ns//x/\n"],
+    ["posix-sed-bre", "/a\\{3,2\\}/p\n"],
+    ["posix-sed-bre", "/a\\{999999999999999999999999\\}/p\n"],
+    ["posix-sed-ere", "/a{3,2}/p\n"],
   ];
 
   for (const [variant, source] of cases) {
@@ -993,7 +1001,7 @@ test("a non-ASCII delimiter remains one delimiter token", () => {
 });
 
 test("empty physical lines and leading semicolons do not duplicate nodes", () => {
-  const tree = parse("posix-bre", " \t\n;;;p\n\n");
+  const tree = parse("posix-sed-bre", " \t\n;;;p\n\n");
   assertPortable(tree);
   assert.equal(nodes(tree, "empty_command").length, 3);
   assert.equal(nodes(tree, "command_separator").length, 6);

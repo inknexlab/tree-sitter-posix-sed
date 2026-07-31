@@ -2,10 +2,10 @@
   "formatter": {
     "includes": [
       "**",
-      "!posix-bre/src/grammar.json",
-      "!posix-bre/src/node-types.json",
-      "!posix-ere/src/grammar.json",
-      "!posix-ere/src/node-types.json"
+      "!posix-sed-bre/src/grammar.json",
+      "!posix-sed-bre/src/node-types.json",
+      "!posix-sed-ere/src/grammar.json",
+      "!posix-sed-ere/src/node-types.json"
     ]
   },
   "javascript": {

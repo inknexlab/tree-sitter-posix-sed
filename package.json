@@ -1,16 +1,16 @@
 {
-  "name": "tree-sitter-sed",
+  "name": "tree-sitter-posix-sed",
   "version": "0.1.0",
   "private": true,
   "description": "Tree-sitter BRE and ERE grammars for POSIX.1-2024 sed scripts.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/inknexlab/tree-sitter-sed.git"
+    "url": "git+https://github.com/inknexlab/tree-sitter-posix-sed.git"
   },
   "bugs": {
-    "url": "https://github.com/inknexlab/tree-sitter-sed/issues"
+    "url": "https://github.com/inknexlab/tree-sitter-posix-sed/issues"
   },
-  "homepage": "https://github.com/inknexlab/tree-sitter-sed#readme",
+  "homepage": "https://github.com/inknexlab/tree-sitter-posix-sed#readme",
   "packageManager": "npm@10.9.4",
   "engines": {
     "node": ">=22.0.0"
