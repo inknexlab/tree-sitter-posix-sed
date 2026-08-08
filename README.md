@@ -35,8 +35,7 @@ major mode using these grammars.
 ## Language server
 
 [sed-language-server](https://github.com/inknexlab/sed-language-server) uses
-these grammars to provide diagnostics, formatting, and label navigation
-through the Language Server Protocol.
+these grammars for diagnostics, formatting, and label navigation.
 
 ## Specifications
 
