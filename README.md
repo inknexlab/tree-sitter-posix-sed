@@ -29,10 +29,10 @@ For example, POSIX BRE uses `posix_sed_bre` from `posix-sed-bre/src`:
 (treesit-install-language-grammar 'posix_sed_bre)
 ```
 
-Emacs does not include a Tree-sitter major mode for `sed`; define a custom
-major mode that uses the parser.
+[sed-ts-mode](https://github.com/inknexlab/sed-ts-mode) provides a Tree-sitter
+major mode using these grammars.
 
-### Language server
+## Language server
 
 [sed-language-server](https://github.com/inknexlab/sed-language-server) uses
 these grammars to provide diagnostics, formatting, and label navigation
