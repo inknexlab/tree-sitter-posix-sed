@@ -32,10 +32,6 @@ For example, POSIX BRE uses `posix_sed_bre` from `posix-sed-bre/src`:
 Emacs does not include a Tree-sitter major mode for `sed`; define a custom
 major mode that uses the parser.
 
-![A POSIX ERE sed script with syntax highlighting in Emacs](assets/emacs-preview.png)
-
-_An example of POSIX ERE `sed` syntax highlighting in Emacs._
-
 ### Language server
 
 [sed-language-server](https://github.com/inknexlab/sed-language-server) uses
