@@ -1,7 +1,7 @@
 # tree-sitter-posix-sed
 
 [Tree-sitter](https://tree-sitter.github.io/tree-sitter/) grammars for
-POSIX.1-2024 `sed` syntax.
+POSIX.1-2024 `sed`.
 
 ## Languages
 
