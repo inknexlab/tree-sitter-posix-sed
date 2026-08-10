@@ -36,7 +36,7 @@ major mode using these grammars.
 
 [sed-language-server](https://github.com/inknexlab/sed-language-server) uses
 these grammars for completion, diagnostics, finding references, formatting,
-going to definitions, renaming, and hover information.
+going to definitions, and hover information.
 
 ## Specifications
 
