@@ -9,12 +9,16 @@ const outcomes = [
   "incomplete_syntax",
 ];
 
-function issueRuleName(reason) {
-  return `_${reason}_issue`;
+function issueRuleName(id) {
+  return `_${id}_issue`;
 }
 
-function outcomeRuleName(reason) {
-  return `_${reason}_outcome`;
+function outcomeRuleName(id) {
+  return `_${id}_outcome`;
+}
+
+function reasonRuleName(id) {
+  return `_${id}_reason`;
 }
 
 function defineIssueRules(definitions) {
@@ -27,18 +31,37 @@ function defineIssueRules(definitions) {
 
   for (const outcome of activeOutcomes) {
     rules[outcome] = ($) => {
-      const reasons = definitions
-        .filter((definition) => definition.outcome === outcome)
-        .map(({ reason }) => $[reason]);
+      const reasons = [
+        ...new Set(
+          definitions
+            .filter((definition) => definition.outcome === outcome)
+            .map(({ reason }) => reason),
+        ),
+      ].map((reason) => $[reason]);
       return reasons.length === 1 ? reasons[0] : choice(...reasons);
     };
   }
 
-  for (const { outcome, reason, rule } of definitions) {
-    rules[reason] = rule;
-    rules[outcomeRuleName(reason)] = ($) => seq($[reason]);
-    rules[issueRuleName(reason)] = ($) =>
-      seq(alias($[outcomeRuleName(reason)], $[outcome]));
+  for (const reason of new Set(definitions.map(({ reason }) => reason))) {
+    rules[reason] = ($) => {
+      const variants = definitions
+        .filter((definition) => definition.reason === reason)
+        .map((definition) => {
+          const id = definition.id ?? reason;
+          return $[reasonRuleName(id)];
+        });
+      return variants.length === 1 ? variants[0] : choice(...variants);
+    };
+  }
+
+  for (const definition of definitions) {
+    const { outcome, reason, rule } = definition;
+    const id = definition.id ?? reason;
+    rules[reasonRuleName(id)] = rule;
+    rules[outcomeRuleName(id)] = ($) =>
+      seq(alias($[reasonRuleName(id)], $[reason]));
+    rules[issueRuleName(id)] = ($) =>
+      seq(alias($[outcomeRuleName(id)], $[outcome]));
   }
 
   return rules;
@@ -48,12 +71,26 @@ function namedExternal($, external, name) {
   return alias(external, $[name]);
 }
 
-function issueField($, reason) {
-  return field("issue", alias($[`_${reason}_issue`], $.syntax_issue));
+function issueField($, id) {
+  return field("issue", alias($[issueRuleName(id)], $.syntax_issue));
 }
 
-function issueNode($, reason) {
-  return alias($[`_${reason}_issue`], $.syntax_issue);
+function issueNode($, id) {
+  return alias($[issueRuleName(id)], $.syntax_issue);
+}
+
+function missingAtEndOrBoundary($, reason) {
+  return choice(
+    issueField($, reason),
+    issueField($, `nonconforming_${reason}`),
+  );
+}
+
+function missingCommandSeparator($) {
+  return choice(
+    issueNode($, "missing_command_separator"),
+    issueNode($, "incomplete_missing_command_separator"),
+  );
 }
 
 function functionVerb($, spelling) {
@@ -74,10 +111,14 @@ const delimiterNames = [
 
 const missingDelimiterReasons = [
   "incomplete_regular_expression",
+  "unterminated_regular_expression",
   "incomplete_replacement",
+  "unterminated_replacement",
   "incomplete_translation",
+  "unterminated_translation",
   "invalid_delimiter",
   "missing_opening_delimiter",
+  "nonconforming_missing_opening_delimiter",
 ];
 
 const functionDefinitions = [
@@ -169,7 +210,7 @@ const nonWriteSubstitutionFlagRules = [
   "case_insensitive_flag",
   "print_flag",
 ];
-const occurrenceFlagPattern = "0*[1-9][[:digit:]]*";
+const occurrenceFlagPattern = "[[:digit:]]+";
 
 function delimiter($, name) {
   return alias($[`_${name}_delimiter`], $.delimiter);
@@ -289,28 +330,9 @@ function commandListRules() {
 
     _unmatched_closing_brace_without_separator: ($) =>
       seq(
-        alias(
-          $._missing_separator_before_unmatched_brace_issue,
-          $.syntax_issue,
-        ),
+        issueNode($, "missing_separator_before_unmatched_brace"),
         issueNode($, "unmatched_closing_brace"),
         optional($._blanks),
-      ),
-
-    _missing_separator_before_unmatched_brace_issue: ($) =>
-      seq(
-        alias(
-          $._missing_separator_before_unmatched_brace_outcome,
-          $.nonconforming_syntax,
-        ),
-      ),
-
-    _missing_separator_before_unmatched_brace_outcome: ($) =>
-      seq(
-        alias(
-          $._missing_separator_before_unmatched_brace_marker,
-          $.missing_command_separator,
-        ),
       ),
 
     _top_level_chainable_item: ($) =>
@@ -389,11 +411,8 @@ function commandListRules() {
 
     _block_command_list_missing_separator: ($) =>
       choice(
-        seq(issueNode($, "missing_command_separator")),
-        seq(
-          $._block_command_sequence,
-          issueNode($, "missing_command_separator"),
-        ),
+        seq(missingCommandSeparator($)),
+        seq($._block_command_sequence, missingCommandSeparator($)),
         seq($._terminated_block_line, $._block_command_list_missing_separator),
       ),
 
@@ -426,6 +445,7 @@ function addressRules(mode) {
         choice(
           delimiter($, "regex_address_end"),
           missingDelimiter($, "incomplete_regular_expression"),
+          missingDelimiter($, "unterminated_regular_expression"),
         ),
       ),
     );
@@ -512,7 +532,10 @@ function addressRules(mode) {
     _address_separator: ($) =>
       choice(
         $._comma_address_separator,
-        prec(-1, seq(issueField($, "missing_address_separator"), $._blanks)),
+        prec(
+          -1,
+          seq(issueField($, "missing_address_separator"), optional($._blanks)),
+        ),
       ),
 
     _comma_address_separator: ($) =>
@@ -534,14 +557,9 @@ function addressRules(mode) {
       field("token", alias(",", $.address_separator_token)),
 
     address: ($) =>
-      choice(
-        $.line_number_address,
-        $.last_line_address,
-        $.context_address,
-        seq(issueField($, "invalid_address")),
-      ),
+      choice($.line_number_address, $.last_line_address, $.context_address),
 
-    line_number_address: () => /0*[1-9][[:digit:]]*/,
+    line_number_address: () => /[[:digit:]]+/,
 
     last_line_address: () => "$",
 
@@ -557,6 +575,7 @@ function addressRules(mode) {
               choice(
                 missingDelimiter($, "invalid_delimiter"),
                 missingDelimiter($, "missing_opening_delimiter"),
+                missingDelimiter($, "nonconforming_missing_opening_delimiter"),
               ),
             ),
           ),
@@ -570,10 +589,7 @@ function operandRules(mode) {
 
   function substitutionFlagChoice($) {
     const rules = nonWriteSubstitutionFlagRules.map((rule) => $[rule]);
-    rules.push(
-      seq(issueField($, "zero_substitution_occurrence")),
-      seq(issueField($, "invalid_substitution_flag")),
-    );
+    rules.push(seq(issueField($, "invalid_substitution_flag")));
     return choice(...rules);
   }
 
@@ -626,6 +642,7 @@ function operandRules(mode) {
             choice(
               missingDelimiter($, "invalid_delimiter"),
               missingDelimiter($, "missing_opening_delimiter"),
+              missingDelimiter($, "nonconforming_missing_opening_delimiter"),
             ),
           ),
           seq(
@@ -635,11 +652,20 @@ function operandRules(mode) {
               seq(
                 field("middle", delimiter($, "substitute_middle")),
                 optional(field("replacement", $.replacement)),
-                field("closing", missingDelimiter($, "incomplete_replacement")),
+                field(
+                  "closing",
+                  choice(
+                    missingDelimiter($, "incomplete_replacement"),
+                    missingDelimiter($, "unterminated_replacement"),
+                  ),
+                ),
               ),
               field(
                 "middle",
-                missingDelimiter($, "incomplete_regular_expression"),
+                choice(
+                  missingDelimiter($, "incomplete_regular_expression"),
+                  missingDelimiter($, "unterminated_regular_expression"),
+                ),
               ),
             ),
           ),
@@ -653,6 +679,7 @@ function operandRules(mode) {
           $.matched_text_reference,
           $.replacement_backreference,
           $.replacement_escaped_delimiter,
+          $.ambiguous_replacement_delimiter_escape,
           $.replacement_escape,
           $.escaped_newline,
           seq(issueField($, "unspecified_replacement_escape")),
@@ -678,17 +705,17 @@ function operandRules(mode) {
       ),
 
     replacement_escaped_delimiter: ($) =>
-      choice(
-        field(
-          "token",
-          namedExternal(
-            $,
-            $._replacement_escaped_delimiter,
-            "escaped_delimiter_token",
-          ),
+      field(
+        "token",
+        namedExternal(
+          $,
+          $._replacement_escaped_delimiter,
+          "escaped_delimiter_token",
         ),
-        seq(issueField($, "replacement_ampersand_delimiter_escape")),
       ),
+
+    ambiguous_replacement_delimiter_escape: ($) =>
+      seq(issueField($, "replacement_ampersand_delimiter_escape")),
 
     replacement_escape: ($) =>
       namedExternal(
@@ -729,10 +756,13 @@ function operandRules(mode) {
       seq(
         field("verb", alias("w", $.substitution_flag)),
         choice(
-          seq($._blanks, field("wfile", $.wfile)),
-          seq($._blanks, issueField($, "missing_wfile")),
-          seq(issueField($, "omitted_file_separator"), field("wfile", $.wfile)),
-          seq(issueField($, "missing_wfile")),
+          seq($._blanks, field("wfile", alias($._substitution_wfile, $.wfile))),
+          seq($._blanks, missingAtEndOrBoundary($, "missing_wfile")),
+          seq(
+            issueField($, "omitted_file_separator"),
+            field("wfile", alias($._substitution_wfile, $.wfile)),
+          ),
+          seq(missingAtEndOrBoundary($, "missing_wfile")),
         ),
       ),
 
@@ -751,11 +781,20 @@ function operandRules(mode) {
                   field("closing", delimiter($, "translate_end")),
                   field(
                     "closing",
-                    missingDelimiter($, "incomplete_translation"),
+                    choice(
+                      missingDelimiter($, "incomplete_translation"),
+                      missingDelimiter($, "unterminated_translation"),
+                    ),
                   ),
                 ),
               ),
-              field("middle", missingDelimiter($, "incomplete_translation")),
+              field(
+                "middle",
+                choice(
+                  missingDelimiter($, "incomplete_translation"),
+                  missingDelimiter($, "unterminated_translation"),
+                ),
+              ),
             ),
           ),
           field(
@@ -763,6 +802,7 @@ function operandRules(mode) {
             choice(
               missingDelimiter($, "invalid_delimiter"),
               missingDelimiter($, "missing_opening_delimiter"),
+              missingDelimiter($, "nonconforming_missing_opening_delimiter"),
             ),
           ),
         ),
@@ -848,6 +888,9 @@ function functionRules() {
 
     wfile: ($) => namedExternal($, $._file_argument, "wfile_token"),
 
+    _substitution_wfile: ($) =>
+      namedExternal($, $._substitution_wfile_argument, "wfile_token"),
+
     label: ($) => namedExternal($, $._line_word, "label_token"),
 
     comment: ($) => namedExternal($, $._comment_text, "comment_text"),
@@ -882,7 +925,7 @@ function functionRules() {
           functionVerb($, spelling),
           choice(
             seq(field("introducer", $.text_introducer), field("text", $.text)),
-            seq(issueField($, "missing_text_introducer")),
+            seq(missingAtEndOrBoundary($, "missing_text_introducer")),
           ),
         );
     } else if (form === "optionalLabel") {
@@ -902,7 +945,10 @@ function functionRules() {
       rules[rule] = ($) =>
         seq(
           functionVerb($, spelling),
-          choice(field("label", $.label), issueField($, "missing_label")),
+          choice(
+            field("label", $.label),
+            missingAtEndOrBoundary($, "missing_label"),
+          ),
         );
     } else if (form === "rfile" || form === "wfile") {
       const missingFileReason =
@@ -912,9 +958,9 @@ function functionRules() {
           functionVerb($, spelling),
           choice(
             seq($._blanks, field(form, $[form])),
-            seq($._blanks, issueField($, missingFileReason)),
+            seq($._blanks, missingAtEndOrBoundary($, missingFileReason)),
             seq(issueField($, "omitted_file_separator"), field(form, $[form])),
-            issueField($, missingFileReason),
+            missingAtEndOrBoundary($, missingFileReason),
           ),
         );
     } else if (form === "comment") {
@@ -1055,34 +1101,50 @@ function editingCommandRules() {
       ),
 
     _line_terminated_editing_command: ($) =>
-      seq(
-        $._line_terminated_editing_command_body,
-        optional(issueField($, "unexpected_command_text")),
-      ),
-
-    _recovered_line_terminated_editing_command: ($) =>
-      prec.right(
+      choice(
         seq(
-          $._line_terminated_editing_command_body,
+          $._line_terminated_regular_editing_command_body,
           optional(issueField($, "unexpected_command_text")),
-          issueField($, "forbidden_command_separator"),
-          optional($._blanks),
+        ),
+        seq(
+          $._line_terminated_substitute_editing_command_body,
+          optional(issueField($, "unexpected_command_text")),
         ),
       ),
 
-    _line_terminated_editing_command_body: ($) =>
+    _recovered_line_terminated_editing_command: ($) =>
       choice(
-        addressedForms($, lineTerminated, "line_terminated"),
-        seq(
-          optional($._blanks),
-          optional(
-            seq(field("addresses", $.address_clause), optional($._blanks)),
+        prec.right(
+          seq(
+            $._line_terminated_regular_editing_command_body,
+            optional(issueField($, "unexpected_command_text")),
+            issueField($, "forbidden_command_separator"),
+            optional($._blanks),
           ),
-          optional(field("negation", $.negation)),
-          field(
-            "function",
-            alias($._line_terminated_substitute_function, $.function),
+        ),
+        prec.right(
+          seq(
+            $._line_terminated_substitute_editing_command_body,
+            optional(issueField($, "unexpected_command_text")),
+            issueField($, "command_after_write_flag"),
+            optional($._blanks),
           ),
+        ),
+      ),
+
+    _line_terminated_regular_editing_command_body: ($) =>
+      addressedForms($, lineTerminated, "line_terminated"),
+
+    _line_terminated_substitute_editing_command_body: ($) =>
+      seq(
+        optional($._blanks),
+        optional(
+          seq(field("addresses", $.address_clause), optional($._blanks)),
+        ),
+        optional(field("negation", $.negation)),
+        field(
+          "function",
+          alias($._line_terminated_substitute_function, $.function),
         ),
       ),
 
@@ -1095,6 +1157,20 @@ function editingCommandRules() {
           ),
           optional(field("negation", $.negation)),
           field("function", alias($._unknown_function, $.function)),
+        ),
+        seq(
+          optional($._blanks),
+          optional(
+            seq(field("addresses", $.address_clause), optional($._blanks)),
+          ),
+          field("negation", $.negation),
+          field("function", alias($._reserved_unknown_function, $.function)),
+        ),
+        seq(
+          optional($._blanks),
+          field("addresses", alias($._double_address_clause, $.address_clause)),
+          optional($._blanks),
+          field("function", alias($._reserved_unknown_function, $.function)),
         ),
         seq(
           optional($._blanks),
@@ -1116,7 +1192,14 @@ function editingCommandRules() {
         optional(issueField($, "unexpected_command_text")),
       ),
 
-    _missing_function: ($) => seq(issueField($, "missing_function")),
+    _reserved_unknown_function: ($) =>
+      seq(
+        issueField($, "reserved_unknown_function"),
+        optional(issueField($, "unexpected_command_text")),
+      ),
+
+    _missing_function: ($) =>
+      seq(missingAtEndOrBoundary($, "missing_function")),
 
     _chainable_substitute_function: ($) =>
       seq(alias($._substitute_function_without_write, $.substitute_function)),
@@ -1186,12 +1269,32 @@ const missingMarkerNames = [
   "missing_closing_brace",
   "missing_opening_delimiter",
   "missing_separator_before_unmatched_brace",
+  "nonconforming_missing_function",
+  "nonconforming_missing_label",
+  "nonconforming_missing_rfile",
+  "nonconforming_missing_wfile",
+  "nonconforming_missing_text_introducer",
+  "nonconforming_missing_opening_delimiter",
+  "missing_subexpression_placeholder",
+  "incomplete_bracket_list",
+  "incomplete_bracket_expression",
+  "incomplete_alternative",
+  "incomplete_command_separator",
 ];
 
 function issueDefinitions(mode) {
   function missing(reason) {
     return ($) => $[`_${reason}_marker`];
   }
+
+  const boundaryMissingReasons = [
+    "missing_function",
+    "missing_label",
+    "missing_rfile",
+    "missing_wfile",
+    "missing_text_introducer",
+    "missing_opening_delimiter",
+  ];
 
   return [
     {
@@ -1263,11 +1366,15 @@ function issueDefinitions(mode) {
       outcome: "undefined_syntax",
       rule: ($) => $._regex_adjacent_duplication_marker,
     },
-    {
-      reason: "empty_alternative",
-      outcome: "undefined_syntax",
-      rule: missing("empty_alternative"),
-    },
+    ...(mode === "ere"
+      ? [
+          {
+            reason: "empty_alternative",
+            outcome: "undefined_syntax",
+            rule: missing("empty_alternative"),
+          },
+        ]
+      : []),
     {
       reason: "missing_bracket_list",
       outcome: "undefined_syntax",
@@ -1282,6 +1389,11 @@ function issueDefinitions(mode) {
       reason: "undefined_translation_escape",
       outcome: "undefined_syntax",
       rule: ($) => $._translate_nonportable_escape,
+    },
+    {
+      reason: "command_after_write_flag",
+      outcome: "undefined_syntax",
+      rule: () => token.immediate(";"),
     },
     {
       reason: "equivalence_class_range_start",
@@ -1343,12 +1455,12 @@ function issueDefinitions(mode) {
           {
             reason: "bre_subexpression_left_anchor",
             outcome: "implementation_option_syntax",
-            rule: ($) => $._regex_bre_subexpression_left_anchor,
+            rule: ($) => $._regex_bre_subexpression_caret,
           },
           {
             reason: "bre_subexpression_right_anchor",
             outcome: "implementation_option_syntax",
-            rule: ($) => $._regex_bre_subexpression_right_anchor,
+            rule: ($) => $._regex_bre_subexpression_dollar,
           },
         ]
       : []),
@@ -1368,14 +1480,15 @@ function issueDefinitions(mode) {
       rule: missing("additional_address"),
     },
     {
-      reason: "invalid_address",
-      outcome: "nonconforming_syntax",
-      rule: () => token(prec(-1, /0+/)),
-    },
-    {
       reason: "unknown_function",
       outcome: "nonconforming_syntax",
       rule: () => token(prec(-2, /[^[:blank:][:digit:]$\/\\!;{}#\n]/)),
+    },
+    {
+      id: "reserved_unknown_function",
+      reason: "unknown_function",
+      outcome: "nonconforming_syntax",
+      rule: ($) => $._reserved_unknown_function_token,
     },
     {
       reason: "unexpected_command_text",
@@ -1417,6 +1530,12 @@ function issueDefinitions(mode) {
       rule: missing("missing_command_separator"),
     },
     {
+      id: "missing_separator_before_unmatched_brace",
+      reason: "missing_command_separator",
+      outcome: "nonconforming_syntax",
+      rule: ($) => $._missing_separator_before_unmatched_brace_marker,
+    },
+    {
       reason: "invalid_substitution_flag",
       outcome: "nonconforming_syntax",
       rule: ($) => $._invalid_substitution_flag,
@@ -1427,10 +1546,39 @@ function issueDefinitions(mode) {
       rule: () => "\\",
     },
     {
-      reason: "zero_substitution_occurrence",
+      reason: "unterminated_regular_expression",
       outcome: "nonconforming_syntax",
-      rule: ($) => $._nonportable_substitution_occurrence,
+      rule: ($) =>
+        choice(
+          $._regex_line_unterminated_address,
+          $._regex_line_unterminated_substitute,
+        ),
     },
+    {
+      reason: "forbidden_regular_expression_newline",
+      outcome: "nonconforming_syntax",
+      rule: ($) => $._regex_forbidden_newline_escape,
+    },
+    {
+      reason: "unterminated_replacement",
+      outcome: "nonconforming_syntax",
+      rule: ($) => $._replacement_line_unterminated,
+    },
+    {
+      reason: "unterminated_translation",
+      outcome: "nonconforming_syntax",
+      rule: ($) =>
+        choice(
+          $._translate_line_unterminated_source,
+          $._translate_line_unterminated_destination,
+        ),
+    },
+    ...boundaryMissingReasons.map((reason) => ({
+      id: `nonconforming_${reason}`,
+      reason,
+      outcome: "nonconforming_syntax",
+      rule: missing(`nonconforming_${reason}`),
+    })),
     {
       reason: "missing_function",
       outcome: "incomplete_syntax",
@@ -1475,6 +1623,49 @@ function issueDefinitions(mode) {
       reason: "missing_subexpression",
       outcome: "incomplete_syntax",
       rule: missing("missing_subexpression"),
+    },
+    {
+      id: "incomplete_unclosed_subexpression",
+      reason: "unclosed_subexpression",
+      outcome: "incomplete_syntax",
+      rule: ($) => $._regex_incomplete_group,
+    },
+    {
+      reason: "incomplete_bracket_term",
+      outcome: "incomplete_syntax",
+      rule: ($) => $._regex_incomplete_bracket_term,
+    },
+    {
+      id: "incomplete_missing_bracket_list",
+      reason: "missing_bracket_list",
+      outcome: "incomplete_syntax",
+      rule: ($) => $._incomplete_bracket_list_marker,
+    },
+    {
+      id: "incomplete_unclosed_bracket_expression",
+      reason: "unclosed_bracket_expression",
+      outcome: "incomplete_syntax",
+      rule: ($) => $._incomplete_bracket_expression_marker,
+    },
+    ...(mode === "ere"
+      ? [
+          {
+            reason: "incomplete_alternative",
+            outcome: "incomplete_syntax",
+            rule: ($) => $._incomplete_alternative_marker,
+          },
+        ]
+      : []),
+    {
+      reason: "incomplete_interval",
+      outcome: "incomplete_syntax",
+      rule: ($) => $._regex_incomplete_interval,
+    },
+    {
+      id: "incomplete_missing_command_separator",
+      reason: "missing_command_separator",
+      outcome: "incomplete_syntax",
+      rule: ($) => $._incomplete_command_separator_marker,
     },
     {
       reason: "incomplete_regular_expression",
@@ -1539,11 +1730,11 @@ function externalTokens($, mode) {
     ...(mode === "bre"
       ? [
           $._regex_unmatched_group_close,
-          $._regex_bre_alternation,
-          $._regex_bre_zero_or_one,
-          $._regex_bre_one_or_more,
-          $._regex_bre_subexpression_left_anchor,
-          $._regex_bre_subexpression_right_anchor,
+          $._regex_bre_vertical_line_escape,
+          $._regex_bre_question_mark_escape,
+          $._regex_bre_plus_escape,
+          $._regex_bre_subexpression_caret,
+          $._regex_bre_subexpression_dollar,
           $._bre_vertical_line_escape_marker,
           $._bre_question_mark_escape_marker,
           $._bre_plus_escape_marker,
@@ -1614,7 +1805,6 @@ function externalTokens($, mode) {
     $._translate_unterminated_source,
     $._translate_unterminated_destination,
     $._invalid_substitution_flag,
-    $._nonportable_substitution_occurrence,
     $._text_command_start,
     $._text_literal,
     $._text_backslash_escape,
@@ -1625,8 +1815,19 @@ function externalTokens($, mode) {
     $._default_output_suppression,
     $._comment_text,
     $._file_argument,
+    $._substitution_wfile_argument,
     $._line_word,
     $._right_brace,
+    $._reserved_unknown_function_token,
+    $._regex_incomplete_group,
+    $._regex_incomplete_bracket_term,
+    $._regex_incomplete_interval,
+    $._regex_forbidden_newline_escape,
+    $._regex_line_unterminated_address,
+    $._regex_line_unterminated_substitute,
+    $._replacement_line_unterminated,
+    $._translate_line_unterminated_source,
+    $._translate_line_unterminated_destination,
     ...missingMarkerNames.map((name) => $[`_${name}_marker`]),
     $._error_sentinel,
   ];
@@ -1648,7 +1849,13 @@ function defineGrammar(name, mode) {
       [
         $.address_clause,
         $._chainable_editing_command,
-        $._line_terminated_editing_command_body,
+        $._line_terminated_regular_editing_command_body,
+      ],
+      [
+        $.address_clause,
+        $._chainable_editing_command,
+        $._line_terminated_regular_editing_command_body,
+        $._recovered_editing_command,
       ],
     ],
 

@@ -124,10 +124,10 @@ Preserves BRE interval recovery structure
     (command_separator)))
 
 ==================
-Marks implementation-defined BRE operators and optional subexpression anchors
+Preserves implementation-dependent BRE forms without selecting their interpretation
 :language(posix_sed_bre)
 ==================
-/\(^a\)\+b\?c\|d/p
+/\(^a$\)\+b\?c\|d/p
 
 ---
 
@@ -140,56 +140,84 @@ Marks implementation-defined BRE operators and optional subexpression anchors
             (delimiter
               (delimiter_token))
             (basic_reg_exp
-              (basic_reg_exp
+              (bre_branch
                 (bre_branch
                   (bre_branch
                     (bre_branch
+                      (bre_branch
+                        (bre_branch
+                          (bre_branch
+                            (bre_expression
+                              (simple_bre
+                                (nondupl_bre
+                                  (back_open_parenthesis)
+                                  (basic_reg_exp
+                                    (bre_branch
+                                      (bre_branch
+                                        (bre_branch
+                                          (bre_expression
+                                            (simple_bre
+                                              (nondupl_bre
+                                                (one_char_or_coll_elem_bre
+                                                  (bre_subexpression_anchor
+                                                    (syntax_issue
+                                                      (implementation_option_syntax
+                                                        (bre_subexpression_left_anchor)))))))))
+                                        (bre_expression
+                                          (simple_bre
+                                            (nondupl_bre
+                                              (one_char_or_coll_elem_bre
+                                                (ordinary_character
+                                                  (ordinary_character_token)))))))
+                                      (bre_expression
+                                        (simple_bre
+                                          (nondupl_bre
+                                            (one_char_or_coll_elem_bre
+                                              (bre_subexpression_anchor
+                                                (syntax_issue
+                                                  (implementation_option_syntax
+                                                    (bre_subexpression_right_anchor))))))))))
+                                  (back_close_parenthesis
+                                    (back_close_parenthesis_token))))))
+                          (bre_expression
+                            (simple_bre
+                              (nondupl_bre
+                                (one_char_or_coll_elem_bre
+                                  (bre_extension_escape
+                                    (back_plus)
+                                    (syntax_issue
+                                      (implementation_defined_syntax
+                                        (bre_plus_escape)))))))))
+                        (bre_expression
+                          (simple_bre
+                            (nondupl_bre
+                              (one_char_or_coll_elem_bre
+                                (ordinary_character
+                                  (ordinary_character_token)))))))
                       (bre_expression
                         (simple_bre
                           (nondupl_bre
-                            (back_open_parenthesis)
-                            (basic_reg_exp
-                              (bre_branch
-                                (bre_expression
-                                  (left_anchor
-                                    (syntax_issue
-                                      (implementation_option_syntax
-                                        (bre_subexpression_left_anchor))))
-                                  (simple_bre
-                                    (nondupl_bre
-                                      (one_char_or_coll_elem_bre
-                                        (ordinary_character
-                                          (ordinary_character_token))))))))
-                            (back_close_parenthesis
-                              (back_close_parenthesis_token)))
-                          (bre_dupl_symbol
-                            (back_plus)
-                            (syntax_issue
-                              (implementation_defined_syntax
-                                (bre_plus_escape)))))))
+                            (one_char_or_coll_elem_bre
+                              (bre_extension_escape
+                                (back_qm)
+                                (syntax_issue
+                                  (implementation_defined_syntax
+                                    (bre_question_mark_escape)))))))))
                     (bre_expression
                       (simple_bre
                         (nondupl_bre
                           (one_char_or_coll_elem_bre
                             (ordinary_character
-                              (ordinary_character_token))))
-                        (bre_dupl_symbol
-                          (back_qm)
-                          (syntax_issue
-                            (implementation_defined_syntax
-                              (bre_question_mark_escape)))))))
+                              (ordinary_character_token)))))))
                   (bre_expression
                     (simple_bre
                       (nondupl_bre
                         (one_char_or_coll_elem_bre
-                          (ordinary_character
-                            (ordinary_character_token))))))))
-              (bre_alternation_operator
-                (back_bar)
-                (syntax_issue
-                  (implementation_defined_syntax
-                    (bre_vertical_line_escape))))
-              (bre_branch
+                          (bre_extension_escape
+                            (back_bar)
+                            (syntax_issue
+                              (implementation_defined_syntax
+                                (bre_vertical_line_escape)))))))))
                 (bre_expression
                   (simple_bre
                     (nondupl_bre
@@ -253,7 +281,7 @@ Classifies malformed BRE interval recovery inside the POSIX hierarchy
     (command_separator)))
 
 ==================
-Gives BRE delimiter escapes precedence over operators
+Recognizes BRE delimiter escapes before implementation-dependent forms
 :language(posix_sed_bre)
 ==================
 s|\||x|
@@ -331,6 +359,41 @@ s|$\||x|
                       (quoted_character
                         (escaped_delimiter
                           (escaped_delimiter_token)))))))))
+          (delimiter
+            (delimiter_token))
+          (replacement
+            (replacement_literal
+              (replacement_literal_token)))
+          (delimiter
+            (delimiter_token)))))
+    (command_separator)))
+
+==================
+Preserves a special BRE delimiter escape without selecting its interpretation
+:language(posix_sed_bre)
+==================
+s.\..x.
+
+---
+
+(script
+  (command_list
+    (editing_command
+      (function
+        (substitute_function
+          (function_verb)
+          (delimiter
+            (delimiter_token))
+          (basic_reg_exp
+            (bre_branch
+              (bre_expression
+                (simple_bre
+                  (nondupl_bre
+                    (one_char_or_coll_elem_bre
+                      (ambiguous_delimiter_escape
+                        (syntax_issue
+                          (unspecified_syntax
+                            (special_delimiter_escape))))))))))
           (delimiter
             (delimiter_token))
           (replacement
