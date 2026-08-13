@@ -2413,15 +2413,15 @@
           "named": true
         },
         {
+          "type": "period",
+          "named": true
+        },
+        {
           "type": "quoted_character",
           "named": true
         },
         {
           "type": "sed_newline_escape",
-          "named": true
-        },
-        {
-          "type": "wildcard",
           "named": true
         }
       ]
@@ -2446,6 +2446,21 @@
     "type": "ordinary_character_escape",
     "named": true,
     "fields": {}
+  },
+  {
+    "type": "period",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "period_token",
+          "named": true
+        }
+      ]
+    }
   },
   {
     "type": "print_first_line_function",
@@ -3096,24 +3111,6 @@
             "named": true
           }
         ]
-      },
-      "terminator": {
-        "multiple": false,
-        "required": true,
-        "types": [
-          {
-            "type": "text_eof",
-            "named": true
-          },
-          {
-            "type": "text_line_end",
-            "named": true
-          },
-          {
-            "type": "text_terminator",
-            "named": true
-          }
-        ]
       }
     },
     "children": {
@@ -3190,25 +3187,6 @@
       "types": [
         {
           "type": "text_literal_token",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
-    "type": "text_terminator",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": false,
-      "required": true,
-      "types": [
-        {
-          "type": "text_eof",
-          "named": true
-        },
-        {
-          "type": "text_line_end",
           "named": true
         }
       ]
@@ -3562,21 +3540,6 @@
     }
   },
   {
-    "type": "wildcard",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": false,
-      "required": true,
-      "types": [
-        {
-          "type": "wildcard_token",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
     "type": "write_flag",
     "named": true,
     "fields": {
@@ -3837,6 +3800,10 @@
     "named": false
   },
   {
+    "type": "period_token",
+    "named": true
+  },
+  {
     "type": "quoted_character_token",
     "named": true
   },
@@ -3881,19 +3848,11 @@
     "named": true
   },
   {
-    "type": "text_eof",
-    "named": true
-  },
-  {
     "type": "text_escaped_newline_token",
     "named": true
   },
   {
     "type": "text_introducer_token",
-    "named": true
-  },
-  {
-    "type": "text_line_end",
     "named": true
   },
   {
@@ -3914,10 +3873,6 @@
   },
   {
     "type": "wfile_token",
-    "named": true
-  },
-  {
-    "type": "wildcard_token",
     "named": true
   },
   {

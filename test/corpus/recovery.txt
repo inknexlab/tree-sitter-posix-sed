@@ -115,6 +115,28 @@ Distinguishes a closing-brace separator error from a newline
                 (missing_closing_brace)))))))))
 
 ==================
+Classifies a blank-separated closing brace inside a block
+:language(posix_sed_bre)
+==================
+{ }
+
+---
+
+(script
+  (command_list
+    (editing_command
+      (function
+        (block_function
+          (function_verb)
+          (command_list
+            (syntax_issue
+              (nonconforming_syntax
+                (missing_command_separator))))
+          (closing_brace
+            (closing_brace_token)))))
+    (command_separator)))
+
+==================
 Classifies replacement termination at a physical line boundary
 :language(posix_sed_bre)
 ==================
@@ -148,6 +170,60 @@ p
             (syntax_issue
               (nonconforming_syntax
                 (unterminated_replacement)))))))
+    (command_separator)
+    (editing_command
+      (function
+        (print_function
+          (function_verb))))
+    (command_separator)))
+
+==================
+Recovers unmatched closing braces between top-level commands
+:language(posix_sed_bre)
+==================
+}p
+a}
+p};p
+
+---
+
+(script
+  (command_list
+    (syntax_issue
+      (nonconforming_syntax
+        (unmatched_closing_brace)))
+    (syntax_issue
+      (nonconforming_syntax
+        (missing_command_separator)))
+    (editing_command
+      (function
+        (print_function
+          (function_verb))))
+    (command_separator)
+    (editing_command
+      (function
+        (append_function
+          (function_verb)
+          (syntax_issue
+            (nonconforming_syntax
+              (missing_text_introducer))))))
+    (syntax_issue
+      (nonconforming_syntax
+        (missing_command_separator)))
+    (syntax_issue
+      (nonconforming_syntax
+        (unmatched_closing_brace)))
+    (command_separator)
+    (editing_command
+      (function
+        (print_function
+          (function_verb))))
+    (syntax_issue
+      (nonconforming_syntax
+        (missing_command_separator)))
+    (syntax_issue
+      (nonconforming_syntax
+        (unmatched_closing_brace)))
     (command_separator)
     (editing_command
       (function

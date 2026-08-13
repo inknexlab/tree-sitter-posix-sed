@@ -28,6 +28,7 @@
     "check:generated": "node scripts/check-generated.js",
     "test": "npm run test:corpus && npm run test:boundaries",
     "test:boundaries": "node scripts/run-boundary-tests.js",
+    "test:convergence": "node scripts/run-convergence-tests.js",
     "test:corpus": "node scripts/run-tree-sitter.js test",
     "test:debug": "node scripts/run-tree-sitter.js test --debug-build --rebuild",
     "test:fuzz": "node scripts/run-fuzz-tests.js --iterations 100 --edits 5",

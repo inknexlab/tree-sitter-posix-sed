@@ -1,12 +1,10 @@
 #!/usr/bin/env node
 
-const { spawnSync } = require("node:child_process");
-const { mkdtempSync, rmSync, writeFileSync } = require("node:fs");
+const { mkdtempSync, rmSync } = require("node:fs");
 const { tmpdir } = require("node:os");
 const { join } = require("node:path");
+const { parseFixture } = require("./parse-fixture");
 
-const root = join(__dirname, "..");
-const runner = join(__dirname, "run-tree-sitter.js");
 const temporaryDirectory = mkdtempSync(
   join(tmpdir(), "tree-sitter-posix-sed-boundary-"),
 );
@@ -55,6 +53,20 @@ const cases = [
     nodes: ["append_function"],
   },
   {
+    name: "complete text at source end",
+    scope: "source.sed.posix.bre",
+    source: "a\\\nfoo",
+    issues: [],
+    nodes: ["append_function", "text_introducer", "text"],
+  },
+  {
+    name: "empty text at source end",
+    scope: "source.sed.posix.bre",
+    source: "a\\\n",
+    issues: ["incomplete_syntax/missing_text"],
+    nodes: ["append_function", "text_introducer"],
+  },
+  {
     name: "missing opening delimiter at source end",
     scope: "source.sed.posix.bre",
     source: "s",
@@ -70,6 +82,26 @@ const cases = [
       "incomplete_syntax/missing_closing_brace",
     ],
     nodes: ["block_function", "print_function"],
+  },
+  {
+    name: "block leading empty command with missing separator at source end",
+    scope: "source.sed.posix.bre",
+    source: "{;p",
+    issues: [
+      "incomplete_syntax/missing_command_separator",
+      "incomplete_syntax/missing_closing_brace",
+    ],
+    nodes: ["block_function", "empty_command", "print_function"],
+  },
+  {
+    name: "blank-separated block end at source end",
+    scope: "source.sed.posix.bre",
+    source: "{ ",
+    issues: [
+      "incomplete_syntax/missing_command_separator",
+      "incomplete_syntax/missing_closing_brace",
+    ],
+    nodes: ["block_function"],
   },
   {
     name: "unclosed BRE bracket expression at source end",
@@ -169,6 +201,15 @@ const convergenceCases = [
     ],
   },
   {
+    name: "missing separator after an unmatched closing brace",
+    scope: "source.sed.posix.bre",
+    source: "}p\n",
+    histories: [
+      { source: "}\n", edits: ["1 0 p"] },
+      { source: "};p\n", edits: ["1 1 "] },
+    ],
+  },
+  {
     name: "reserved unknown function after negation",
     scope: "source.sed.posix.bre",
     source: "1!/\np\n",
@@ -188,27 +229,7 @@ function issuePaths(tree) {
 }
 
 function parse(scope, source, name, edits = []) {
-  const sourcePath = join(temporaryDirectory, `${name}.sed`);
-  writeFileSync(sourcePath, source);
-  return spawnSync(
-    process.execPath,
-    [
-      runner,
-      "parse",
-      "--scope",
-      scope,
-      "--no-ranges",
-      sourcePath,
-      ...(edits.length === 0 ? [] : ["--edits", ...edits]),
-    ],
-    {
-      cwd: root,
-      encoding: "utf8",
-      env: { ...process.env, NO_COLOR: "1" },
-      maxBuffer: 16 * 1024 * 1024,
-      windowsHide: true,
-    },
-  );
+  return parseFixture(temporaryDirectory, scope, source, name, edits);
 }
 
 function fail(name, message, tree) {

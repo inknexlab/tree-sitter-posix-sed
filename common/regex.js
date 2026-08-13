@@ -1,10 +1,4 @@
-function namedExternal($, external, name) {
-  return alias(external, $[name]);
-}
-
-function issueField($, id) {
-  return field("issue", alias($[`_${id}_issue`], $.syntax_issue));
-}
+const { issueField, namedExternal } = require("./dsl");
 
 function intervalExpression($, openingName, closingName) {
   return seq(
@@ -318,7 +312,7 @@ function commonRegularExpressionRules() {
     sed_newline_escape: ($) =>
       namedExternal($, $._regex_newline_escape, "sed_newline_escape_token"),
 
-    wildcard: ($) => namedExternal($, $._regex_wildcard, "wildcard_token"),
+    period: ($) => namedExternal($, $._regex_period, "period_token"),
 
     left_anchor: ($) =>
       namedExternal($, $._regex_beginning_anchor, "left_anchor_token"),
@@ -482,7 +476,7 @@ function breRules() {
         $.ordinary_character,
         $.quoted_character,
         $.sed_newline_escape,
-        $.wildcard,
+        $.period,
         $.bracket_expression,
         $.ambiguous_delimiter_escape,
         $.bre_extension_escape,
@@ -494,31 +488,21 @@ function breRules() {
     _bre_interval: ($) =>
       intervalExpression($, "back_open_brace", "back_close_brace"),
 
-    _leading_bre_dupl_symbol: ($) => breDuplicationSymbol($),
-
     leading_bre_dupl_symbol: ($) =>
       choice(
         seq(
           issueField($, "leading_duplication_symbol"),
-          field(
-            "operator",
-            alias($._leading_bre_dupl_symbol, $.bre_dupl_symbol),
-          ),
+          field("operator", $.bre_dupl_symbol),
         ),
         seq(issueField($, "malformed_interval")),
         seq(issueField($, "incomplete_interval")),
       ),
 
-    _adjacent_bre_dupl_symbol: ($) => breDuplicationSymbol($),
-
     adjacent_bre_dupl_symbol: ($) =>
       choice(
         seq(
           issueField($, "adjacent_duplication_symbol"),
-          field(
-            "operator",
-            alias($._adjacent_bre_dupl_symbol, $.bre_dupl_symbol),
-          ),
+          field("operator", $.bre_dupl_symbol),
         ),
         seq(issueField($, "malformed_interval")),
         seq(issueField($, "incomplete_interval")),
@@ -637,32 +621,34 @@ function ereRules() {
         $.ordinary_character,
         $.quoted_character,
         $.sed_newline_escape,
-        $.wildcard,
+        $.period,
         $.bracket_expression,
         $.ambiguous_delimiter_escape,
       ),
 
     ere_dupl_symbol: ($) =>
-      choice(
-        ereDuplicationSymbol($),
-        $.repetition_modifier,
-        seq(
-          issueField($, "adjacent_duplication_symbol"),
+      seq(
+        choice(
           ereDuplicationSymbol($),
+          seq(
+            issueField($, "adjacent_duplication_symbol"),
+            ereDuplicationSymbol($),
+          ),
+          seq(issueField($, "malformed_interval")),
+          seq(issueField($, "incomplete_interval")),
         ),
-        seq(issueField($, "malformed_interval")),
-        seq(issueField($, "incomplete_interval")),
+        optional(field("modifier", $.repetition_modifier)),
       ),
 
     _ere_interval: ($) => intervalExpression($, "open_brace", "close_brace"),
 
-    repetition_modifier: ($) =>
-      field(
-        "operator",
-        namedExternal($, $._regex_repetition_modifier, "zero_or_one_operator"),
-      ),
+    repetition_modifier: ($) => $._regex_repetition_modifier,
 
-    _leading_ere_dupl_symbol: ($) => ereDuplicationSymbol($),
+    _leading_ere_dupl_symbol: ($) =>
+      seq(
+        ereDuplicationSymbol($),
+        optional(field("modifier", $.repetition_modifier)),
+      ),
 
     leading_ere_dupl_symbol: ($) =>
       choice(
@@ -673,8 +659,13 @@ function ereRules() {
             alias($._leading_ere_dupl_symbol, $.ere_dupl_symbol),
           ),
         ),
-        seq(issueField($, "malformed_interval")),
-        seq(issueField($, "incomplete_interval")),
+        seq(
+          choice(
+            issueField($, "malformed_interval"),
+            issueField($, "incomplete_interval"),
+          ),
+          optional(field("modifier", $.repetition_modifier)),
+        ),
       ),
   };
 }

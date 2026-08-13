@@ -249,30 +249,39 @@ Classifies malformed BRE interval recovery inside the POSIX hierarchy
               (delimiter_token))
             (basic_reg_exp
               (bre_branch
+                (bre_branch
+                  (bre_branch
+                    (bre_expression
+                      (simple_bre
+                        (nondupl_bre
+                          (back_open_parenthesis)
+                          (syntax_issue
+                            (undefined_syntax
+                              (empty_subexpression)))
+                          (back_close_parenthesis
+                            (back_close_parenthesis_token))))))
+                  (bre_expression
+                    (simple_bre
+                      (nondupl_bre
+                        (one_char_or_coll_elem_bre
+                          (ordinary_character
+                            (ordinary_character_token))))
+                      (bre_dupl_symbol
+                        (back_open_brace)
+                        (dup_count
+                          (dup_count_token))
+                        (interval_separator)
+                        (dup_count
+                          (dup_count_token))
+                        (syntax_issue
+                          (undefined_syntax
+                            (malformed_interval)))))))
                 (bre_expression
                   (simple_bre
                     (nondupl_bre
-                      (back_open_parenthesis)
-                      (basic_reg_exp
-                        (bre_branch
-                          (bre_expression
-                            (simple_bre
-                              (nondupl_bre
-                                (one_char_or_coll_elem_bre
-                                  (ordinary_character
-                                    (ordinary_character_token))))
-                              (bre_dupl_symbol
-                                (back_open_brace)
-                                (dup_count
-                                  (dup_count_token))
-                                (interval_separator)
-                                (dup_count
-                                  (dup_count_token))
-                                (syntax_issue
-                                  (undefined_syntax
-                                    (malformed_interval))))))))
-                      (back_close_parenthesis
-                        (back_close_parenthesis_token)))))))
+                      (syntax_issue
+                        (undefined_syntax
+                          (unmatched_subexpression_close))))))))
             (delimiter
               (delimiter_token)))))
       (function
@@ -464,4 +473,38 @@ s😺猫😺犬😺g
             (delimiter_token))
           (substitution_flags
             (global_flag)))))
+    (command_separator)))
+
+==================
+Classifies empty BRE subexpressions inside the POSIX hierarchy
+:language(posix_sed_bre)
+==================
+/\(\)/p
+
+---
+
+(script
+  (command_list
+    (editing_command
+      (address_clause
+        (address
+          (context_address
+            (delimiter
+              (delimiter_token))
+            (basic_reg_exp
+              (bre_branch
+                (bre_expression
+                  (simple_bre
+                    (nondupl_bre
+                      (back_open_parenthesis)
+                      (syntax_issue
+                        (undefined_syntax
+                          (empty_subexpression)))
+                      (back_close_parenthesis
+                        (back_close_parenthesis_token)))))))
+            (delimiter
+              (delimiter_token)))))
+      (function
+        (print_function
+          (function_verb))))
     (command_separator)))

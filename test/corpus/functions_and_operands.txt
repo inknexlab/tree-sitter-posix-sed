@@ -21,9 +21,7 @@ w output
             (text_introducer_token))
           (text
             (text_literal
-              (text_literal_token))
-            (text_terminator
-              (text_line_end))))))
+              (text_literal_token))))))
     (command_separator)
     (editing_command
       (function
@@ -33,9 +31,7 @@ w output
             (text_introducer_token))
           (text
             (text_literal
-              (text_literal_token))
-            (text_terminator
-              (text_line_end))))))
+              (text_literal_token))))))
     (command_separator)
     (editing_command
       (function
@@ -307,9 +303,7 @@ third
             (text_escaped_newline
               (text_escaped_newline_token))
             (text_literal
-              (text_literal_token))
-            (text_terminator
-              (text_line_end))))))
+              (text_literal_token))))))
     (command_separator)))
 
 ==================
