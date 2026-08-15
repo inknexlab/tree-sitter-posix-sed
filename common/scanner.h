@@ -4,11 +4,11 @@
 #ifndef SED_REGEX_EXTENDED
 #error "SED_REGEX_EXTENDED must be defined before including scanner.h"
 #endif
+#include "tree_sitter/alloc.h"
 #include "tree_sitter/parser.h"
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
 
 enum TokenType {
   REGEX_ADDRESS_START,
@@ -289,12 +289,11 @@ static void reset_state(ScannerState *state) {
 }
 
 static void *sed_scanner_create(void) {
-  ScannerState *state = calloc(1, sizeof(ScannerState));
-  return state;
+  return ts_calloc(1, sizeof(ScannerState));
 }
 
 static void sed_scanner_destroy(void *payload) {
-  free(payload);
+  ts_free(payload);
 }
 
 static void serialize_uint16(char *buffer, unsigned offset, uint16_t value) {
@@ -661,14 +660,6 @@ static bool scan_simple_delimiter(
   return true;
 }
 
-static bool scan_regex_address_start(TSLexer *lexer, ScannerState *state) {
-  if (lexer->lookahead != '/') {
-    return false;
-  }
-
-  return scan_simple_delimiter(lexer, state, MODE_REGEX_ADDRESS);
-}
-
 static bool scan_mode_delimiter(
   TSLexer *lexer,
   ScannerState *state,
@@ -766,15 +757,6 @@ static bool scan_to_physical_line_end(TSLexer *lexer, bool consumed) {
   }
 
   return consumed;
-}
-
-static bool scan_default_output_suppression(TSLexer *lexer) {
-  if (lexer->lookahead != 'n') {
-    return false;
-  }
-
-  consume(lexer);
-  return true;
 }
 
 static bool scan_file_argument(TSLexer *lexer) {
@@ -1047,10 +1029,6 @@ static bool regex_is_inside_bracket(const ScannerState *state) {
   return state->regex_state != REGEX_OUTSIDE_BRACKET;
 }
 
-static bool regex_has_open_group(const ScannerState *state) {
-  return state->regex_group_depth > 0;
-}
-
 static enum RegexBracketPendingElement
 bracket_element_for_character(int32_t character) {
   switch (character) {
@@ -1218,14 +1196,12 @@ regex_unterminated_symbol(enum ScannerMode mode, bool at_end_of_source) {
                           : REGEX_LINE_UNTERMINATED_SUBSTITUTE;
 }
 
-static bool emit_regex_unterminated(
-  TSLexer *lexer,
+static bool emit_unterminated(
   ScannerState *state,
   const bool *valid_symbols,
+  TSSymbol candidate,
   TSSymbol *symbol
 ) {
-  const TSSymbol candidate =
-    regex_unterminated_symbol(state->mode, lexer->eof(lexer));
   if (!emit_symbol(valid_symbols, candidate, symbol)) {
     return false;
   }
@@ -2183,7 +2159,12 @@ static bool scan_regex_token(
     );
   }
   if (literal_result == LITERAL_SCAN_LINE_END) {
-    return emit_regex_unterminated(lexer, state, valid_symbols, symbol);
+    return emit_unterminated(
+      state,
+      valid_symbols,
+      regex_unterminated_symbol(state->mode, lexer->eof(lexer)),
+      symbol
+    );
   }
 
   if (state->regex_state == REGEX_OUTSIDE_BRACKET) {
@@ -2358,8 +2339,11 @@ static bool scan_regex_token(
   return false;
 }
 
-static enum LiteralScanResult
-scan_replacement_literal(TSLexer *lexer, const ScannerState *state) {
+static enum LiteralScanResult scan_operand_literal(
+  TSLexer *lexer,
+  const ScannerState *state,
+  bool ampersand_is_special
+) {
   bool consumed = false;
   lexer->mark_end(lexer);
 
@@ -2373,7 +2357,7 @@ scan_replacement_literal(TSLexer *lexer, const ScannerState *state) {
       state->delimiter ||
       lexer->lookahead ==
       '\\' ||
-      lexer->lookahead == '&'
+      (ampersand_is_special && lexer->lookahead == '&')
     ) {
       return consumed ? LITERAL_SCAN_TOKEN : LITERAL_SCAN_NONE;
     }
@@ -2381,22 +2365,6 @@ scan_replacement_literal(TSLexer *lexer, const ScannerState *state) {
     consume(lexer);
     consumed = true;
   }
-}
-
-static bool emit_replacement_unterminated(
-  TSLexer *lexer,
-  ScannerState *state,
-  const bool *valid_symbols,
-  TSSymbol *symbol
-) {
-  const TSSymbol candidate = lexer->eof(lexer) ? REPLACEMENT_UNTERMINATED
-                                               : REPLACEMENT_LINE_UNTERMINATED;
-  if (!emit_symbol(valid_symbols, candidate, symbol)) {
-    return false;
-  }
-
-  reset_state(state);
-  return true;
 }
 
 static bool scan_replacement_escape(
@@ -2449,12 +2417,18 @@ static bool scan_replacement_token(
   TSSymbol *symbol
 ) {
   const enum LiteralScanResult literal_result =
-    scan_replacement_literal(lexer, state);
+    scan_operand_literal(lexer, state, true);
   if (literal_result == LITERAL_SCAN_TOKEN) {
     return emit_symbol(valid_symbols, REPLACEMENT_LITERAL, symbol);
   }
   if (literal_result == LITERAL_SCAN_LINE_END) {
-    return emit_replacement_unterminated(lexer, state, valid_symbols, symbol);
+    return emit_unterminated(
+      state,
+      valid_symbols,
+      lexer->eof(lexer) ? REPLACEMENT_UNTERMINATED
+                        : REPLACEMENT_LINE_UNTERMINATED,
+      symbol
+    );
   }
 
   if (lexer->lookahead == '\\') {
@@ -2469,25 +2443,6 @@ static bool scan_replacement_token(
   return false;
 }
 
-static enum LiteralScanResult
-scan_translate_literal(TSLexer *lexer, const ScannerState *state) {
-  bool consumed = false;
-  lexer->mark_end(lexer);
-
-  for (;;) {
-    if (lexer->eof(lexer) || lexer->lookahead == '\n') {
-      return consumed ? LITERAL_SCAN_TOKEN : LITERAL_SCAN_LINE_END;
-    }
-
-    if (lexer->lookahead == state->delimiter || lexer->lookahead == '\\') {
-      return consumed ? LITERAL_SCAN_TOKEN : LITERAL_SCAN_NONE;
-    }
-
-    consume(lexer);
-    consumed = true;
-  }
-}
-
 static TSSymbol
 translate_unterminated_symbol(enum ScannerMode mode, bool at_end_of_source) {
   if (mode == MODE_TRANSLATE_SOURCE) {
@@ -2496,22 +2451,6 @@ translate_unterminated_symbol(enum ScannerMode mode, bool at_end_of_source) {
   }
   return at_end_of_source ? TRANSLATE_UNTERMINATED_DESTINATION
                           : TRANSLATE_LINE_UNTERMINATED_DESTINATION;
-}
-
-static bool emit_translate_unterminated(
-  TSLexer *lexer,
-  ScannerState *state,
-  const bool *valid_symbols,
-  TSSymbol *symbol
-) {
-  const TSSymbol candidate =
-    translate_unterminated_symbol(state->mode, lexer->eof(lexer));
-  if (!emit_symbol(valid_symbols, candidate, symbol)) {
-    return false;
-  }
-
-  reset_state(state);
-  return true;
 }
 
 static bool scan_translate_escape(
@@ -2555,12 +2494,17 @@ static bool scan_translate_token(
   TSSymbol *symbol
 ) {
   const enum LiteralScanResult literal_result =
-    scan_translate_literal(lexer, state);
+    scan_operand_literal(lexer, state, false);
   if (literal_result == LITERAL_SCAN_TOKEN) {
     return emit_symbol(valid_symbols, TRANSLATE_LITERAL, symbol);
   }
   if (literal_result == LITERAL_SCAN_LINE_END) {
-    return emit_translate_unterminated(lexer, state, valid_symbols, symbol);
+    return emit_unterminated(
+      state,
+      valid_symbols,
+      translate_unterminated_symbol(state->mode, lexer->eof(lexer)),
+      symbol
+    );
   }
 
   if (lexer->lookahead == '\\') {
@@ -2620,7 +2564,8 @@ static bool sed_scanner_scan_impl(
     is_regex_mode(state->mode) &&
     state->regex_state ==
     REGEX_OUTSIDE_BRACKET &&
-    regex_has_open_group(state) &&
+    state->regex_group_depth >
+    0 &&
     !state->regex_after_alternation &&
     (lexer->eof(lexer) ||
       lexer->lookahead ==
@@ -2838,10 +2783,8 @@ static bool sed_scanner_scan_impl(
     return emit_symbol(valid_symbols, introducer_marker, symbol);
   }
 
-  if (
-    valid_symbols[DEFAULT_OUTPUT_SUPPRESSION] &&
-    scan_default_output_suppression(lexer)
-  ) {
+  if (valid_symbols[DEFAULT_OUTPUT_SUPPRESSION] && lexer->lookahead == 'n') {
+    consume(lexer);
     *symbol = DEFAULT_OUTPUT_SUPPRESSION;
     return true;
   }
@@ -2860,7 +2803,10 @@ static bool sed_scanner_scan_impl(
   }
 
   if (
-    valid_symbols[REGEX_ADDRESS_START] && scan_regex_address_start(lexer, state)
+    valid_symbols[REGEX_ADDRESS_START] &&
+    lexer->lookahead ==
+    '/' &&
+    scan_simple_delimiter(lexer, state, MODE_REGEX_ADDRESS)
   ) {
     *symbol = REGEX_ADDRESS_START;
     return true;
